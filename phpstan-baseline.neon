@@ -1,0 +1,14 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Method Crustum\\Broadcasting\\BroadcastingPlugin\:\:bootstrap\(\) has parameter \$app with generic interface Cake\\Core\\PluginApplicationInterface but does not specify its types\: TSubject$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/BroadcastingPlugin.php
+
+		-
+			message: '#^Class TestApp\\Application extends generic class Cake\\Http\\BaseApplication but does not specify its types\: TSubject$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/TestApp/Application.php
+

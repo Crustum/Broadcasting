@@ -1,0 +1,12 @@
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 8
+    bootstrapFiles:
+        - tests/bootstrap.php
+    excludePaths:
+        - src/TestSuite/BroadcastingTrait.php
+    ignoreErrors:
+
+services:

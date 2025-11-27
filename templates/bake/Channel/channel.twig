@@ -1,0 +1,34 @@
+<?php
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Crustum\Broadcasting\Channel\ChannelInterface;
+use Cake\Datasource\EntityInterface;
+
+/**
+ * {{ class }} Channel
+ *
+ * Handles authorization for the {{ channelName }} channel.
+ */
+class {{ class }} implements ChannelInterface
+{
+    /**
+     * Create a new channel instance.
+     */
+    public function __construct()
+    {
+    }
+
+    /**
+     * Authenticate the user's access to the channel.
+     *
+     * @param \Cake\Datasource\EntityInterface $user The authenticated user entity
+     * @param \Cake\Datasource\EntityInterface $model Model entity from route binding (e.g., Order, Post, etc.)
+     * @return array|bool User data for presence channels, boolean for private channels
+     */
+    public function join(EntityInterface $user, EntityInterface $model): array|bool
+    {
+        return false;
+    }
+}
