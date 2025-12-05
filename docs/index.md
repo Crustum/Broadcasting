@@ -1270,7 +1270,7 @@ Echo.private(`chat.${roomId}`)
 <a name="notifications"></a>
 ## Notifications
 
-By pairing event broadcasting with [Notification Plugin](https://github.com/skie/cakephp-notification), your JavaScript application may receive new notifications as they occur without needing to refresh the page. Before getting started, be sure to read over the documentation on using [the broadcast notification channel](https://github.com/skie/cakephp-broadcasting-notification/docs/index.md).
+By pairing event broadcasting with [Notification Plugin](https://github.com/Crustum/Notification), your JavaScript application may receive new notifications as they occur without needing to refresh the page. Before getting started, be sure to read over the documentation on using [the broadcast notification channel](https://github.com/Crustum/BroadcastingNotification/blob/main/docs/index.md).
 
 Once you have configured a notification to use the broadcast channel, you may listen for the broadcast events using Echo's `notification` method. Remember, the channel name should match the class name of the entity receiving the notifications:
 
