@@ -145,7 +145,7 @@ return [
 
 Once you have enabled event broadcasting, you're ready to learn more about [defining broadcast events](#defining-broadcast-events) and [listening for events](#listening-for-events).
 
-> **Note**
+> [!NOTE]
 > Before broadcasting any events, you should first configure and run a queue worker. All event broadcasting is done via queued jobs so that the response time of your application is not seriously affected by events being broadcast.
 
 <a name="server-side-installation"></a>
@@ -1265,7 +1265,7 @@ Echo.private(`posts.${this.post.id}`)
 <a name="client-events"></a>
 ## Client Events
 
-> **Note**
+> [!NOTE]
 > When using [Pusher Channels](https://pusher.com/channels), you must enable the "Client Events" option in the "App Settings" section of your [application dashboard](https://dashboard.pusher.com/) in order to send client events.
 
 Sometimes you may wish to broadcast an event to other connected clients without hitting your CakePHP application at all. This can be particularly useful for things like "typing" notifications, where you want to alert users of your application that another user is typing a message on a given screen.
