@@ -1,0 +1,26 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Default channel authorization configuration
+ *
+ * This file defines channel authorization rules using Broadcasting::channel().
+ */
+
+use Crustum\Broadcasting\Broadcasting;
+
+Broadcasting::channel('private-users.{userId}', function ($user, $userId) {
+    if (!$user) {
+        return false;
+    }
+
+    return (string)$user->id === $userId;
+});
+
+Broadcasting::channel('private-App.Model.Entity.User.{userId}', function ($user, $userId) {
+    if (!$user) {
+        return false;
+    }
+
+    return (string)$user->id === $userId;
+});

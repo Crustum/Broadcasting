@@ -66,9 +66,31 @@ By default, CakePHP includes four server-side broadcasting drivers for you to ch
 <a name="quickstart"></a>
 ## Quickstart
 
-By default, broadcasting is not enabled in new CakePHP applications. You may enable broadcasting by configuring the Broadcasting plugin and setting up your broadcasting drivers.
+### Installing the Plugin
 
-First, load the Broadcasting plugin in your `Application.php`:
+Install via Composer:
+
+```bash
+composer require crustum/broadcasting
+```
+
+> [!NOTE]
+> This plugin should be registered in your `config/plugins.php` file.
+
+```bash
+bin/cake plugin load Crustum/Broadcasting
+```
+
+> [!TIP]
+> **After the plugin registers itself**, it's recommended to install the configuration with the manifest system:
+
+```bash
+bin/cake manifest install --plugin Crustum/Broadcasting
+```
+
+The Broadcasting plugin will create the `config/broadcasting.php` configuration file and the `config/channels.php` file where you may register your application's broadcast authorization routes and callbacks. Additionally, it will copy the migrations to the application's migrations directory and append the loading of the `config/broadcasting.php` file to the `config/bootstrap.php` file.
+
+Alternatively, you can load the plugin in your `Application.php`:
 
 ```php
 // In src/Application.php
@@ -79,10 +101,9 @@ public function bootstrap(): void
     $this->addPlugin('Crustum/Broadcasting');
 }
 ```
+This will enable broadcasting by configuring the Broadcasting plugin and setting up your broadcasting drivers.
 
-The Broadcasting plugin will create the `config/broadcasting.php` configuration file and the `config/channels.php` file where you may register your application's broadcast authorization routes and callbacks.
-
-CakePHP supports several broadcast drivers out of the box: [Pusher Channels](https://pusher.com/channels), Redis, and a `log` driver for local development and debugging. Additionally, a `null` driver is included which allows you to disable broadcasting during testing. A configuration example is included for each of these drivers in the `config/broadcasting.php` configuration file.
+Plugin supports several broadcast drivers out of the box: [Pusher Channels](https://pusher.com/channels), Redis, and a `log` driver for local development and debugging. Additionally, a `null` driver is included which allows you to disable broadcasting during testing. A configuration example is included for each of these drivers in the `config/broadcasting.php` configuration file.
 
 All of your application's event broadcasting configuration is stored in the `config/broadcasting.php` configuration file:
 

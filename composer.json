@@ -15,6 +15,7 @@
         "cakephp/authentication": "*",
         "cakephp/authorization": "*",
         "cakephp/queue": "^2.2",
+        "crustum/plugin-manifest": "^1.0",
         "firebase/php-jwt": "^6.11",
         "guzzlehttp/psr7": "^2.6",
         "pusher/pusher-php-server": "^7.2",
