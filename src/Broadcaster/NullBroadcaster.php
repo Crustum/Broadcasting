@@ -66,6 +66,7 @@ class NullBroadcaster extends BaseBroadcaster implements BroadcasterInterface
      */
     public function broadcast(array $channels, string $event, array $payload = []): void
     {
+        $this->logBroadcast($channels, $event, $payload);
     }
 
     /**

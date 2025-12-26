@@ -99,6 +99,8 @@ class RedisBroadcaster extends BaseBroadcaster
             return;
         }
 
+        $this->logBroadcast($channels, $event, $payload);
+
         $socket = null;
         if (isset($payload['socket'])) {
             $socket = $payload['socket'];

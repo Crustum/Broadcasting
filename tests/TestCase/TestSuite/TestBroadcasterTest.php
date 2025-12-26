@@ -247,4 +247,47 @@ class TestBroadcasterTest extends TestCase
         $this->assertCount(1, $broadcasts);
         $this->assertEquals('socket-abc-123', $broadcasts[0]['socket']);
     }
+
+    /**
+     * Test setConfig called twice for pusher connection ensures it overloaded
+     *
+     * @return void
+     */
+    public function testSetConfigTwiceOverloadsPusherConnection(): void
+    {
+        Broadcasting::drop('pusher');
+        Broadcasting::getRegistry()->reset();
+
+        $firstConfig = [
+            'className' => TestBroadcaster::class,
+            'connectionName' => 'pusher',
+            'key' => 'first-key',
+            'secret' => 'first-secret',
+            'app_id' => 'first-app-id',
+        ];
+
+        Broadcasting::setConfig('pusher', $firstConfig);
+
+        $firstBroadcaster = Broadcasting::get('pusher');
+        $this->assertInstanceOf(TestBroadcaster::class, $firstBroadcaster);
+        $this->assertEquals('first-key', Broadcasting::getConfig('pusher')['key']);
+
+        $secondConfig = [
+            'className' => TestBroadcaster::class,
+            'connectionName' => 'pusher',
+            'key' => 'second-key',
+            'secret' => 'second-secret',
+            'app_id' => 'second-app-id',
+        ];
+
+        Broadcasting::setConfig('pusher', $secondConfig);
+
+        $secondBroadcaster = Broadcasting::get('pusher');
+        $this->assertInstanceOf(TestBroadcaster::class, $secondBroadcaster);
+        $this->assertEquals('second-key', Broadcasting::getConfig('pusher')['key']);
+        $this->assertEquals('second-secret', Broadcasting::getConfig('pusher')['secret']);
+        $this->assertEquals('second-app-id', Broadcasting::getConfig('pusher')['app_id']);
+
+        $this->assertNotSame($firstBroadcaster, $secondBroadcaster);
+    }
 }

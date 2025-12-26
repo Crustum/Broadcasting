@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace Crustum\Broadcasting\Broadcaster;
 
 use ArrayAccess;
+use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
 use Cake\Http\ServerRequest;
+use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\Utility\Inflector;
 use Closure;
@@ -465,5 +467,31 @@ abstract class BaseBroadcaster implements BroadcasterInterface
     public function setChannelOptions(array $options): void
     {
         $this->channelOptions = $options;
+    }
+
+    /**
+     * Log broadcast message if logging is enabled
+     *
+     * @param array<string> $channels Channel names
+     * @param string $event Event name
+     * @param array<string, mixed> $payload Message payload
+     * @return void
+     */
+    protected function logBroadcast(array $channels, string $event, array $payload = []): void
+    {
+        $logConfig = Configure::read('Broadcasting.log');
+        if (empty($logConfig['enabled'])) {
+            return;
+        }
+
+        $logData = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'connection' => $this->getName(),
+            'channels' => $channels,
+            'event' => $event,
+            'payload' => $payload,
+        ];
+
+        Log::write('info', (string)json_encode($logData), ['scope' => ['broadcasting']]);
     }
 }
