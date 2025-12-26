@@ -316,11 +316,12 @@ class Broadcasting
      */
     public static function channel(string $channel, callable|string $callback, array $options = [], string $connection = 'default'): void
     {
-        if (empty(static::$_config[$connection])) {
+        try {
+            $broadcaster = static::get($connection);
+        } catch (Exception $e) {
             return;
         }
 
-        $broadcaster = static::get($connection);
         $broadcaster->registerChannel($channel, $callback, $options);
     }
 
