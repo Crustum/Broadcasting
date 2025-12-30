@@ -39,8 +39,6 @@ class PusherChannelConventionsTraitTest extends TestCase
      */
     protected function tearDown(): void
     {
-        unset($this->testClass);
-
         parent::tearDown();
     }
 

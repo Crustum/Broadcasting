@@ -32,5 +32,21 @@ class OrdersFixture extends TestFixture
             'created' => '2024-01-02 00:00:00',
             'modified' => '2024-01-02 00:00:00',
         ],
+        [
+            'id' => 123,
+            'user_id' => 1,
+            'total' => 100.00,
+            'status' => 'paid',
+            'created' => '2024-01-03 00:00:00',
+            'modified' => '2024-01-03 00:00:00',
+        ],
+        [
+            'id' => 124,
+            'user_id' => 999,
+            'total' => 200.00,
+            'status' => 'paid',
+            'created' => '2024-01-04 00:00:00',
+            'modified' => '2024-01-04 00:00:00',
+        ],
     ];
 }

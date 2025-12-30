@@ -6,12 +6,36 @@ namespace Crustum\Broadcasting\Model\Behavior;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\ORM\Behavior;
-use Crustum\Broadcasting\Broadcasting;
+use Crustum\Broadcasting\Model\Interface\BroadcastingTraitInterface;
+use LogicException;
 
 /**
  * Broadcasting Behavior
  *
  * Enables automatic broadcasting of model lifecycle events.
+ *
+ * The table class must use BroadcastingTrait and implement BroadcastingTraitInterface.
+ *
+ * Usage:
+ * ```
+ * use Crustum\Broadcasting\Model\Interface\BroadcastingTraitInterface;
+ * use Crustum\Broadcasting\Model\Trait\BroadcastingTrait;
+ *
+ * class UsersTable extends Table implements BroadcastingTraitInterface
+ * {
+ *     use BroadcastingTrait;
+ *
+ *     public function initialize(array $config): void
+ *     {
+ *         $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
+ *             'events' => [
+ *                 'Model.afterSave' => 'saved',
+ *                 'Model.afterDelete' => 'deleted',
+ *             ]
+ *         ]);
+ *     }
+ * }
+ * ```
  *
  * Examples:
  *
@@ -79,34 +103,10 @@ class BroadcastingBehavior extends Behavior
      */
     protected array $_defaultConfig = [
         'implementedFinders' => [],
-        'implementedMethods' => [
-            'broadcastEvent' => 'broadcastEvent',
-            'enableBroadcasting' => 'enableBroadcasting',
-            'disableBroadcasting' => 'disableBroadcasting',
-            'isBroadcastingEnabled' => 'isBroadcastingEnabled',
-            'setBroadcastChannels' => 'setBroadcastChannels',
-            'setBroadcastPayload' => 'setBroadcastPayload',
-            'setBroadcastConnection' => 'setBroadcastConnection',
-            'setBroadcastQueue' => 'setBroadcastQueue',
-            'setBroadcastEventName' => 'setBroadcastEventName',
-            'setBroadcastEvents' => 'setBroadcastEvents',
-            'enableBroadcastEvent' => 'enableBroadcastEvent',
-            'disableBroadcastEvent' => 'disableBroadcastEvent',
-        ],
         'events' => [
             'Model.afterSave' => 'saved',
             'Model.afterDelete' => 'deleted',
         ],
-        'broadcastEvents' => [
-            'created' => true,
-            'updated' => true,
-            'deleted' => true,
-        ],
-        'connection' => 'default',
-        'queue' => null,
-        'channels' => null,
-        'payload' => null,
-        'enabled' => true,
     ];
 
     /**
@@ -114,11 +114,56 @@ class BroadcastingBehavior extends Behavior
      *
      * @param array<string, mixed> $config Configuration options
      * @return void
+     * @throws \LogicException If table does not implement BroadcastingTraitInterface
      */
     public function initialize(array $config): void
     {
         if (isset($config['events'])) {
             $this->setConfig('events', $config['events'], false);
+        }
+
+        if (!$this->_table instanceof BroadcastingTraitInterface) {
+            throw new LogicException(
+                sprintf(
+                    'Table %s must use BroadcastingTrait and implement BroadcastingTraitInterface.',
+                    get_class($this->_table),
+                ),
+            );
+        }
+
+        /** @var \Cake\ORM\Table&\Crustum\Broadcasting\Model\Interface\BroadcastingTraitInterface $table */
+        $table = $this->_table;
+
+        if (isset($config['enabled'])) {
+            if ($config['enabled']) {
+                $table->enableBroadcasting();
+            } else {
+                $table->disableBroadcasting();
+            }
+        }
+
+        if (isset($config['channels'])) {
+            $table->setBroadcastChannels($config['channels']);
+        }
+
+        if (isset($config['payload'])) {
+            $table->setBroadcastPayload($config['payload']);
+        }
+
+        if (isset($config['connection'])) {
+            $table->setBroadcastConnection($config['connection']);
+        }
+
+        if (isset($config['queue'])) {
+            $table->setBroadcastQueue($config['queue']);
+        }
+
+        if (isset($config['eventName'])) {
+            $table->setBroadcastEventName($config['eventName']);
+        }
+
+        if (isset($config['broadcastEvents'])) {
+            $table->setBroadcastEvents($config['broadcastEvents']);
         }
     }
 
@@ -141,10 +186,6 @@ class BroadcastingBehavior extends Behavior
      */
     public function handleEvent(EventInterface $event, EntityInterface $entity): void
     {
-        if (!$this->getConfig('enabled')) {
-            return;
-        }
-
         $eventName = $event->getName();
 
         if ($eventName === 'Model.afterSave') {
@@ -153,289 +194,8 @@ class BroadcastingBehavior extends Behavior
             $broadcastEvent = $this->_config['events'][$eventName];
         }
 
-        $broadcastEvents = $this->getConfig('broadcastEvents', []);
-        if (isset($broadcastEvents[$broadcastEvent]) && !$broadcastEvents[$broadcastEvent]) {
-            return;
-        }
-
-        $this->broadcastEvent($entity, $broadcastEvent);
-    }
-
-    /**
-     * Broadcast a model event
-     *
-     * @param \Cake\Datasource\EntityInterface $entity The entity
-     * @param string $event The broadcast event name
-     * @return void
-     */
-    public function broadcastEvent(EntityInterface $entity, string $event): void
-    {
-        if (!$this->getConfig('enabled')) {
-            return;
-        }
-
-        $channels = $this->getBroadcastChannels($entity, $event);
-        $payload = $this->getBroadcastPayload($entity, $event);
-        $connection = $this->getBroadcastConnection($entity);
-
-        if (!empty($channels)) {
-            $eventName = $this->getEventName($entity, $event);
-            $connectionName = $connection ?? 'default';
-            $queue = $this->getConfig('queue');
-
-            $pending = Broadcasting::to($channels)
-                ->event($eventName)
-                ->data($payload)
-                ->connection($connectionName);
-
-            if ($queue !== null) {
-                $pending->queue($queue);
-            } else {
-                $pending->send();
-            }
-        }
-    }
-
-    /**
-     * Get the channels to broadcast on
-     *
-     * @param \Cake\Datasource\EntityInterface $entity The entity
-     * @param string $event The event name
-     * @return array<mixed> Array of channels
-     */
-    protected function getBroadcastChannels(EntityInterface $entity, string $event): array
-    {
-        $channels = $this->getConfig('channels');
-
-        if (is_callable($channels)) {
-            $result = $channels($entity, $event);
-            $channelsArray = is_array($result) ? $result : [$result];
-        } elseif (is_array($channels)) {
-            $channelsArray = $channels;
-        } else {
-            $channelsArray = [$entity];
-        }
-
-        return $this->convertEntitiesToChannelNames($channelsArray);
-    }
-
-    /**
-     * Convert entity instances to Laravel-style channel names
-     *
-     * @param array<mixed> $channels Array of channels or entities
-     * @return array<string> Array of channel names
-     */
-    protected function convertEntitiesToChannelNames(array $channels): array
-    {
-        $converted = [];
-        foreach ($channels as $channel) {
-            if ($channel instanceof EntityInterface) {
-                $entityClass = get_class($channel);
-                $channelName = str_replace('\\', '.', $entityClass);
-                $id = $channel->get('id');
-                if ($id !== null) {
-                    $channelName .= '.' . $id;
-                }
-                $converted[] = $channelName;
-            } else {
-                $converted[] = $channel;
-            }
-        }
-
-        return $converted;
-    }
-
-    /**
-     * Get the payload to broadcast
-     *
-     * @param \Cake\Datasource\EntityInterface $entity The entity
-     * @param string $event The event name
-     * @return array<string, mixed>
-     */
-    protected function getBroadcastPayload(EntityInterface $entity, string $event): array
-    {
-        $payload = $this->getConfig('payload');
-
-        if (is_callable($payload)) {
-            return $payload($entity, $event);
-        }
-
-        if (is_array($payload)) {
-            return $payload;
-        }
-        if ($payload instanceof EntityInterface) {
-            return $payload->toArray();
-        }
-        $data = $entity->toArray();
-        $data['event_type'] = $event;
-
-        return $data;
-    }
-
-    /**
-     * Get the broadcast connection
-     *
-     * @param \Cake\Datasource\EntityInterface $entity The entity
-     * @return string|null
-     */
-    protected function getBroadcastConnection(EntityInterface $entity): ?string
-    {
-        $connection = $this->getConfig('connection');
-
-        if (is_callable($connection)) {
-            return $connection($entity);
-        }
-
-        return $connection;
-    }
-
-    /**
-     * Get the event name for broadcasting
-     *
-     * @param \Cake\Datasource\EntityInterface $entity The entity
-     * @param string $event The event name
-     * @return string
-     */
-    protected function getEventName(EntityInterface $entity, string $event): string
-    {
-        $eventNameConfig = $this->getConfig('eventName');
-
-        if (is_callable($eventNameConfig)) {
-            $result = $eventNameConfig($entity, $event);
-            if ($result !== null) {
-                return $result;
-            }
-        }
-
-        if (is_string($eventNameConfig)) {
-            return $eventNameConfig;
-        }
-
-        $entityClass = get_class($entity);
-        $className = substr($entityClass, strrpos($entityClass, '\\') + 1);
-
-        return $className . ucfirst($event);
-    }
-
-    /**
-     * Enable broadcasting
-     *
-     * @return void
-     */
-    public function enableBroadcasting(): void
-    {
-        $this->setConfig('enabled', true);
-    }
-
-    /**
-     * Disable broadcasting
-     *
-     * @return void
-     */
-    public function disableBroadcasting(): void
-    {
-        $this->setConfig('enabled', false);
-    }
-
-    /**
-     * Check if broadcasting is enabled
-     *
-     * @return bool
-     */
-    public function isBroadcastingEnabled(): bool
-    {
-        return $this->getConfig('enabled');
-    }
-
-    /**
-     * Set custom channels for broadcasting
-     *
-     * @param callable|array<mixed>|null $channels Channels configuration
-     * @return void
-     */
-    public function setBroadcastChannels(callable|array|null $channels): void
-    {
-        $this->setConfig('channels', $channels);
-    }
-
-    /**
-     * Set custom payload for broadcasting
-     *
-     * @param callable|array<string, mixed>|null $payload Payload configuration
-     * @return void
-     */
-    public function setBroadcastPayload(callable|array|null $payload): void
-    {
-        $this->setConfig('payload', $payload);
-    }
-
-    /**
-     * Set broadcast connection
-     *
-     * @param callable|string|null $connection Connection name or callback
-     * @return void
-     */
-    public function setBroadcastConnection(string|callable|null $connection): void
-    {
-        $this->setConfig('connection', $connection);
-    }
-
-    /**
-     * Set custom event name for broadcasting
-     *
-     * @param callable|string|null $eventName Event name or callback
-     * @return void
-     */
-    public function setBroadcastEventName(callable|string|null $eventName): void
-    {
-        $this->setConfig('eventName', $eventName);
-    }
-
-    /**
-     * Set which broadcast events are enabled
-     *
-     * @param array<string, bool> $events Event configuration
-     * @return void
-     */
-    public function setBroadcastEvents(array $events): void
-    {
-        $this->setConfig('broadcastEvents', $events);
-    }
-
-    /**
-     * Enable a specific broadcast event
-     *
-     * @param string $event Event name (created, updated, deleted, etc.)
-     * @return void
-     */
-    public function enableBroadcastEvent(string $event): void
-    {
-        $broadcastEvents = $this->getConfig('broadcastEvents', []);
-        $broadcastEvents[$event] = true;
-        $this->setConfig('broadcastEvents', $broadcastEvents);
-    }
-
-    /**
-     * Disable a specific broadcast event
-     *
-     * @param string $event Event name (created, updated, deleted, etc.)
-     * @return void
-     */
-    public function disableBroadcastEvent(string $event): void
-    {
-        $broadcastEvents = $this->getConfig('broadcastEvents', []);
-        $broadcastEvents[$event] = false;
-        $this->setConfig('broadcastEvents', $broadcastEvents);
-    }
-
-    /**
-     * Set broadcast queue
-     *
-     * @param string|null $queue Queue name
-     * @return void
-     */
-    public function setBroadcastQueue(?string $queue): void
-    {
-        $this->setConfig('queue', $queue);
+        /** @var \Cake\ORM\Table&\Crustum\Broadcasting\Model\Interface\BroadcastingTraitInterface $table */
+        $table = $event->getSubject();
+        $table->broadcastEvent($entity, $broadcastEvent);
     }
 }

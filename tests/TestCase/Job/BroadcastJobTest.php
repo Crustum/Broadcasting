@@ -27,7 +27,6 @@ class BroadcastJobTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($this->broadcastJob);
         Broadcasting::drop('test');
 
         parent::tearDown();
@@ -104,12 +103,18 @@ class BroadcastJobTest extends TestCase
         $this->assertEquals(InteropProcessor::ACK, $result);
     }
 
-    protected function createMessageMock(array $data)
+    /**
+     * Create a mock message
+     *
+     * @param array<string, mixed> $data Message data
+     * @return \Cake\Queue\Job\Message
+     */
+    protected function createMessageMock(array $data): Message
     {
-        $originalMessage = $this->createMock(QueueMessage::class);
+        $originalMessage = $this->createStub(QueueMessage::class);
         $originalMessage->method('getMessageId')->willReturn('test-message-id');
 
-        $message = $this->createMock(Message::class);
+        $message = $this->createStub(Message::class);
         $message->method('getArgument')->willReturnCallback(function ($key, $default = null) use ($data) {
             return $data[$key] ?? $default;
         });

@@ -39,8 +39,6 @@ class EncryptedPrivateChannelTest extends TestCase
      */
     protected function tearDown(): void
     {
-        unset($this->encryptedPrivateChannel);
-
         parent::tearDown();
     }
 

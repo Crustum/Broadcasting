@@ -165,4 +165,21 @@ return [
             ],
         ],
     ],
+    [
+        'table' => 'rooms',
+        'columns' => [
+            'id' => [
+                'type' => 'integer',
+                'autoIncrement' => true,
+            ],
+        ],
+        'constraints' => [
+            'primary' => [
+                'type' => 'primary',
+                'columns' => [
+                    'id',
+                ],
+            ],
+        ],
+    ],
 ];

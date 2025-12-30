@@ -5,7 +5,7 @@ namespace TestApp\Broadcasting;
 
 class InvalidChannel
 {
-    public function join($user, $model): bool
+    public function join(mixed $user, mixed $model): bool
     {
         return true;
     }

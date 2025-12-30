@@ -37,7 +37,7 @@ class OrdersController extends Controller
 
         return $this->response
             ->withType('application/json')
-            ->withStringBody(json_encode([
+            ->withStringBody((string)json_encode([
                 'success' => true,
                 'order_id' => $orderId,
             ]));
@@ -61,7 +61,7 @@ class OrdersController extends Controller
 
         return $this->response
             ->withType('application/json')
-            ->withStringBody(json_encode(['success' => true]));
+            ->withStringBody((string)json_encode(['success' => true]));
     }
 
     /**
@@ -82,6 +82,6 @@ class OrdersController extends Controller
 
         return $this->response
             ->withType('application/json')
-            ->withStringBody(json_encode(['success' => true]));
+            ->withStringBody((string)json_encode(['success' => true]));
     }
 }

@@ -26,7 +26,7 @@ class TestBroadcasterTest extends TestCase
         parent::setUp();
 
         foreach (Broadcasting::configured() as $config) {
-            Broadcasting::drop($config);
+            Broadcasting::drop((string)$config);
         }
 
         Broadcasting::setConfig('default', [

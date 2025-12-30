@@ -52,7 +52,7 @@ trait BroadcastingTrait
     public function setupTestBroadcaster(): void
     {
         foreach (Broadcasting::configured() as $config) {
-            Broadcasting::drop($config);
+            Broadcasting::drop((string)$config);
         }
 
         Broadcasting::setConfig('default', [
@@ -62,6 +62,8 @@ trait BroadcastingTrait
 
         Broadcasting::getRegistry()->reset();
         TestBroadcaster::clearBroadcasts();
+        TestQueueAdapter::replaceQueueAdapter();
+        TestQueueAdapter::clearQueuedJobs();
     }
 
     /**
@@ -75,6 +77,7 @@ trait BroadcastingTrait
     public function cleanupBroadcastingTrait(): void
     {
         TestBroadcaster::clearBroadcasts();
+        TestQueueAdapter::clearQueuedJobs();
         Broadcasting::getRegistry()->reset();
     }
 
@@ -390,5 +393,102 @@ trait BroadcastingTrait
     public function getBroadcastsByConnection(string $connection): array
     {
         return TestBroadcaster::getBroadcastsByConnection($connection);
+    }
+
+    /**
+     * Assert a broadcast was queued
+     *
+     * @param string $event Event name
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertBroadcastQueued(string $event, string $message = ''): void
+    {
+        $queued = TestQueueAdapter::getQueuedBroadcastsByEvent($event);
+        $this->assertNotEmpty(
+            $queued,
+            $message ?: "Broadcast {$event} was not queued",
+        );
+    }
+
+    /**
+     * Assert a broadcast was queued to a specific channel
+     *
+     * @param string $channel Channel name
+     * @param string $event Event name
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertBroadcastQueuedToChannel(
+        string $channel,
+        string $event,
+        string $message = '',
+    ): void {
+        $queued = TestQueueAdapter::getQueuedBroadcastsByChannel($channel);
+        $found = false;
+        foreach ($queued as $job) {
+            if (isset($job['data']['eventName']) && $job['data']['eventName'] === $event) {
+                $found = true;
+                break;
+            }
+        }
+        $this->assertTrue(
+            $found,
+            $message ?: "Broadcast {$event} was not queued to channel {$channel}",
+        );
+    }
+
+    /**
+     * Assert no broadcasts were queued
+     *
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertNoBroadcastsQueued(string $message = ''): void
+    {
+        $count = TestQueueAdapter::getQueuedJobCount();
+        $this->assertEquals(
+            0,
+            $count,
+            $message ?: "Expected no broadcasts to be queued, but {$count} were queued",
+        );
+    }
+
+    /**
+     * Assert a specific count of broadcasts were queued
+     *
+     * @param int $count Expected queued count
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertBroadcastQueuedCount(int $count, string $message = ''): void
+    {
+        $actualCount = TestQueueAdapter::getQueuedJobCount();
+        $this->assertEquals(
+            $count,
+            $actualCount,
+            $message ?: "Expected {$count} broadcasts to be queued, but {$actualCount} were queued",
+        );
+    }
+
+    /**
+     * Get all queued jobs
+     *
+     * @return array<array<string, mixed>>
+     */
+    public function getQueuedJobs(): array
+    {
+        return TestQueueAdapter::getQueuedJobs();
+    }
+
+    /**
+     * Get queued broadcasts by event
+     *
+     * @param string $event Event name
+     * @return array<array<string, mixed>>
+     */
+    public function getQueuedBroadcastsByEvent(string $event): array
+    {
+        return TestQueueAdapter::getQueuedBroadcastsByEvent($event);
     }
 }
