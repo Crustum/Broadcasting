@@ -20,6 +20,7 @@ use Crustum\Broadcasting\Queue\CakeQueueAdapter;
 use Crustum\Broadcasting\Queue\QueueAdapterInterface;
 use Crustum\Broadcasting\Registry\BroadcasterRegistry;
 use Exception;
+use LogicException;
 
 /**
  * Broadcasting provides a consistent interface to Broadcasting in your application. It allows you
@@ -33,7 +34,7 @@ use Exception;
  * A sample configuration would be:
  *
  * ```
- * Broadcasting::config('pusher', [
+ * Broadcasting::setConfig('pusher', [
  *    'className' => Crustum\Broadcasting\Broadcaster\PusherBroadcaster::class,
  *    'key' => 'your-app-key',
  *    'secret' => 'your-app-secret',
@@ -289,7 +290,17 @@ class Broadcasting
             return $registry->get($connection);
         }
 
-        static::_buildBroadcaster($connection);
+        try {
+            static::_buildBroadcaster($connection);
+        } catch (InvalidBroadcasterException $e) {
+            // @phpstan-ignore-next-line
+            if (!$registry->has($connection) && ($connection == 'default')) {
+                $connection = Configure::read('Broadcasting.default');
+
+                return static::get($connection);
+            }
+            throw $e;
+        }
 
         return $registry->get($connection);
     }
@@ -305,11 +316,12 @@ class Broadcasting
      */
     public static function channel(string $channel, callable|string $callback, array $options = [], string $connection = 'default'): void
     {
-        if (empty(static::$_config[$connection])) {
+        try {
+            $broadcaster = static::get($connection);
+        } catch (Exception $e) {
             return;
         }
 
-        $broadcaster = static::get($connection);
         $broadcaster->registerChannel($channel, $callback, $options);
     }
 
@@ -465,5 +477,69 @@ class Broadcasting
     public static function configured(): array
     {
         return array_keys(static::$_config);
+    }
+
+    /**
+     * Override setConfig to allow overloading existing configurations.
+     *
+     * This method allows reconfiguring an existing broadcaster by dropping it first
+     * and removing it from the registry to ensure the new configuration is used.
+     *
+     * @param array<string, mixed>|string $key The name of the configuration, or an array of multiple configs.
+     * @param mixed $config Configuration value. Generally an array of name => configuration data for adapter.
+     * @return void
+     */
+    public static function setConfig(array|string $key, mixed $config = null): void
+    {
+        if ($config === null) {
+            if (!is_array($key)) {
+                throw new LogicException('If config is null, key must be an array.');
+            }
+            foreach ($key as $name => $settings) {
+                static::setConfig((string)$name, $settings);
+            }
+
+            return;
+        }
+        if (!is_string($key)) {
+            throw new LogicException('If config is not null, key must be a string.');
+        }
+
+        if (isset(static::$_config[$key])) {
+            static::drop($key);
+        }
+
+        if (is_object($config)) {
+            $config = ['className' => $config];
+        }
+
+        if (is_array($config) && isset($config['url'])) {
+            $parsed = static::parseDsn($config['url']);
+            unset($config['url']);
+            $config = $parsed + $config;
+        }
+
+        if (isset($config['engine']) && empty($config['className'])) {
+            $config['className'] = $config['engine'];
+            unset($config['engine']);
+        }
+
+        static::$_config[$key] = $config;
+    }
+
+    /**
+     * Initialize configuration from Configure without using setConfig.
+     * This allows loading from config files without triggering duplicate errors.
+     *
+     * @param array<string, array<string, mixed>> $connections Connections configuration
+     * @return void
+     */
+    public static function initFromConfigure(array $connections): void
+    {
+        foreach ($connections as $name => $config) {
+            if (!isset(static::$_config[$name])) {
+                static::$_config[$name] = $config;
+            }
+        }
     }
 }

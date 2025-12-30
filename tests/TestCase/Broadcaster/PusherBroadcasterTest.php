@@ -216,7 +216,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         // Register the channel first
@@ -268,7 +267,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $broadcaster->method('resolveUserFromRequest')
@@ -336,7 +334,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $request = new ServerRequest();
@@ -477,7 +474,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $broadcaster->method('retrieveUserFromCakeRequest')
@@ -552,7 +548,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $broadcaster->method('retrieveUserFromCakeRequest')
@@ -605,7 +600,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $broadcaster->method('retrieveUserFromCakeRequest')
@@ -647,7 +641,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $broadcaster->method('retrieveUserFromCakeRequest')
@@ -708,7 +701,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $broadcaster->method('retrieveUserFromCakeRequest')
@@ -777,7 +769,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $this->mockPusher);
 
         $broadcaster->method('retrieveUserFromCakeRequest')

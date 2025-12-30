@@ -53,7 +53,6 @@ class BroadcastingBehaviorTest extends TestCase
 
         $reflection = new ReflectionClass(Broadcasting::class);
         $property = $reflection->getProperty('_channelsLoaded');
-        $property->setAccessible(true);
         $property->setValue(null, false);
     }
 

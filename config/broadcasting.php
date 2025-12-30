@@ -23,6 +23,34 @@ return [
         'queue_adapter' => CakeQueueAdapter::class,
 
         /**
+         * Channels file path
+         *
+         * Path to the file containing channel authorization callbacks.
+         * If not set, defaults to CONFIG . 'channels.php'
+         *
+         * Example: CONFIG . 'channels.php'
+         *          ROOT . DS . 'config' . DS . 'custom_channels.php'
+         */
+        'channels_file' => CONFIG . 'channels.php',
+
+        /**
+         * Broadcast logging configuration
+         *
+         * Configure logging of all broadcast messages to a separate file.
+         * Useful for debugging and auditing.
+         *
+         * Example:
+         * 'log' => [
+         *     'enabled' => true,
+         *     'file' => 'broadcasting',  // Logs to logs/broadcasting.log
+         * ],
+         */
+        'log' => [
+            'enabled' => env('BROADCASTING_LOG_ENABLED', false),
+            'file' => env('BROADCASTING_LOG_FILE', 'broadcasting'),
+        ],
+
+        /**
          * Broadcasting connections
          *
          * Configure the broadcasting connections for your application. Each connection
@@ -37,12 +65,11 @@ return [
              * events to external services.
              *
              * Supports multiple driver naming conventions:
-             * - Simple driver name: 'null'
              * - Full class name: 'Crustum\Broadcasting\Broadcaster\NullBroadcaster'
              * - Plugin-style: 'Crustum/Broadcasting.Null'
              */
             'null' => [
-                'driver' => 'null',
+                'className' => 'Crustum/Broadcasting.Null',
             ],
 
             /**
@@ -52,7 +79,7 @@ return [
              * This is useful for debugging and development.
              */
             'log' => [
-                'driver' => 'log',
+                'className' => 'Crustum/Broadcasting.Log',
             ],
 
             /**
@@ -67,7 +94,7 @@ return [
              * 'driver' => 'Crustum/Broadcasting.Pusher'
              */
             'pusher' => [
-                'driver' => 'pusher',
+                'className' => 'Crustum/Broadcasting.Pusher',
                 'key' => env('PUSHER_APP_KEY'),
                 'secret' => env('PUSHER_APP_SECRET'),
                 'app_id' => env('PUSHER_APP_ID'),
@@ -87,42 +114,8 @@ return [
              * WebSocket servers or other broadcasting services.
              */
             'redis' => [
-                'driver' => 'redis',
+                'className' => 'Crustum/Broadcasting.Redis',
                 'connection' => env('BROADCASTING_REDIS_CONNECTION', 'default'),
-            ],
-
-            /**
-             * Example of using full class name for custom broadcaster
-             *
-             * This demonstrates how to use a fully qualified class name
-             * instead of a simple driver name.
-             */
-            'custom_pusher' => [
-                'driver' => 'Crustum\Broadcasting\Broadcaster\PusherBroadcaster',
-                'key' => env('PUSHER_APP_KEY'),
-                'secret' => env('PUSHER_APP_SECRET'),
-                'app_id' => env('PUSHER_APP_ID'),
-                'options' => [
-                    'cluster' => env('PUSHER_APP_CLUSTER'),
-                    'useTLS' => env('PUSHER_APP_USE_TLS', true),
-                ],
-            ],
-
-            /**
-             * Example of using plugin-style naming
-             *
-             * This demonstrates the plugin-style naming convention
-             * for broadcaster classes.
-             */
-            'plugin_pusher' => [
-                'driver' => 'Crustum/Broadcasting.Pusher',
-                'key' => env('PUSHER_APP_KEY'),
-                'secret' => env('PUSHER_APP_SECRET'),
-                'app_id' => env('PUSHER_APP_ID'),
-                'options' => [
-                    'cluster' => env('PUSHER_APP_CLUSTER'),
-                    'useTLS' => env('PUSHER_APP_USE_TLS', true),
-                ],
             ],
         ],
 

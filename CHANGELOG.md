@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3]
+
+### Fixed
+
+- Safe channel registration during bootstrap when broadcaster not yet initialized
+
+## [1.0.2]
+
+### Added
+
+- Channels file loading during plugin bootstrap
+- Optional broadcast message logging with `Broadcasting.log` configuration
+
+### Changed
+
+- Broadcaster configuration now uses `className` instead of `driver` (BREAKING)
+
 ## [1.0.1]
 
 ### Added

@@ -5,7 +5,9 @@ namespace Crustum\Broadcasting;
 
 use Cake\Console\CommandCollection;
 use Cake\Core\BasePlugin;
+use Cake\Core\Configure;
 use Cake\Core\PluginApplicationInterface;
+use Cake\Log\Log;
 use Cake\Routing\RouteBuilder;
 use Crustum\Broadcasting\Command\ChannelCommand;
 use Crustum\PluginManifest\Manifest\ManifestInterface;
@@ -31,6 +33,24 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
      */
     public function bootstrap(PluginApplicationInterface $app): void
     {
+        $broadcastingConfig = Configure::read('Broadcasting.connections');
+        if ($broadcastingConfig && is_array($broadcastingConfig)) {
+            Broadcasting::initFromConfigure($broadcastingConfig);
+        }
+
+        Broadcasting::routes();
+
+        $logConfig = Configure::read('Broadcasting.log');
+        if (!empty($logConfig['enabled'])) {
+            $logFile = $logConfig['file'] ?? 'broadcasting';
+            Log::setConfig('broadcasting', [
+                'className' => 'File',
+                'path' => LOGS,
+                'file' => $logFile,
+                'scopes' => ['broadcasting'],
+                'levels' => ['info'],
+            ]);
+        }
     }
 
     /**
@@ -58,12 +78,27 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
     public function routes(RouteBuilder $routes): void
     {
         $routes->plugin(
-            'Broadcasting',
+            'Crustum/Broadcasting',
             ['path' => '/broadcasting'],
             function (RouteBuilder $builder): void {
+
+                $builder->connect('/auth', [
+                'prefix' => null,
+                'plugin' => 'Crustum/Broadcasting',
+                'controller' => 'BroadcastingAuth',
+                'action' => 'auth',
+                ]);
+                $builder->connect('/user-auth', [
+                'prefix' => null,
+                'plugin' => 'Crustum/Broadcasting',
+                'controller' => 'BroadcastingAuth',
+                'action' => 'userAuth',
+                ]);
+
                 $builder->fallbacks();
             },
         );
+
         parent::routes($routes);
     }
 

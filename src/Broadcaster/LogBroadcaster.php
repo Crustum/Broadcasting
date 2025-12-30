@@ -66,6 +66,8 @@ class LogBroadcaster extends BaseBroadcaster implements BroadcasterInterface
      */
     public function broadcast(array $channels, string $event, array $payload = []): void
     {
+        $this->logBroadcast($channels, $event, $payload);
+
         $channelsString = implode(', ', $channels);
         $payloadJson = json_encode($payload, JSON_PRETTY_PRINT);
 
