@@ -9,6 +9,9 @@ use Cake\Routing\Router;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\PendingBroadcast;
+use Crustum\Broadcasting\TestSuite\BroadcastingTrait;
+use Crustum\Broadcasting\TestSuite\TestBroadcaster;
+use Crustum\Broadcasting\TestSuite\TestQueueAdapter;
 use RuntimeException;
 
 /**
@@ -18,6 +21,8 @@ use RuntimeException;
  */
 class PendingBroadcastTest extends TestCase
 {
+    use BroadcastingTrait;
+
     /**
      * Clear all Broadcasting configurations
      *
@@ -26,7 +31,7 @@ class PendingBroadcastTest extends TestCase
     protected function clearBroadcastingConfigurations(): void
     {
         foreach (Broadcasting::configured() as $configName) {
-            Broadcasting::drop($configName);
+            Broadcasting::drop((string)$configName);
         }
         Broadcasting::getRegistry()->reset();
     }
@@ -42,11 +47,13 @@ class PendingBroadcastTest extends TestCase
 
         $this->clearBroadcastingConfigurations();
 
-        Broadcasting::setConfig('default', [
-            'className' => 'Crustum/Broadcasting.Null',
-        ]);
+        TestBroadcaster::replaceAllBroadcasters();
+        TestBroadcaster::clearBroadcasts();
+        TestQueueAdapter::replaceQueueAdapter();
+        TestQueueAdapter::clearQueuedJobs();
+
         Broadcasting::setConfig('pusher', [
-            'className' => 'Crustum/Broadcasting.Null',
+            'className' => TestBroadcaster::class,
         ]);
 
         QueueManager::setConfig('default', [
@@ -175,7 +182,11 @@ class PendingBroadcastTest extends TestCase
             ->data(['id' => 1, 'title' => 'Test'])
             ->send();
 
-        $this->assertTrue(true);
+        $this->assertBroadcastSent('PostCreated');
+        $this->assertBroadcastSentToChannel('posts', 'PostCreated');
+        $broadcasts = TestBroadcaster::getBroadcasts();
+        $this->assertCount(1, $broadcasts);
+        $this->assertEquals(['id' => 1, 'title' => 'Test'], $broadcasts[0]['payload']);
     }
 
     /**
@@ -190,7 +201,12 @@ class PendingBroadcastTest extends TestCase
             ->data(['id' => 1, 'title' => 'Test'])
             ->queue('broadcasting');
 
-        $this->assertTrue(true);
+        $this->assertBroadcastQueued('PostCreated');
+        $this->assertBroadcastQueuedToChannel('posts', 'PostCreated');
+        $this->assertNoBroadcastsSent();
+        $queued = TestQueueAdapter::getQueuedBroadcastsByEvent('PostCreated');
+        $this->assertCount(1, $queued);
+        $this->assertEquals(['id' => 1, 'title' => 'Test'], $queued[0]['data']['payload']);
     }
 
     /**
@@ -206,7 +222,11 @@ class PendingBroadcastTest extends TestCase
             ->connection('pusher')
             ->send();
 
-        $this->assertTrue(true);
+        $this->assertBroadcastSent('PostCreated');
+        $broadcasts = TestBroadcaster::getBroadcasts();
+        $this->assertCount(1, $broadcasts);
+        $this->assertEquals(['posts', 'notifications'], $broadcasts[0]['channels']);
+        $this->assertEquals(['id' => 1, 'title' => 'Test Post'], $broadcasts[0]['payload']);
     }
 
     /**
@@ -229,7 +249,10 @@ class PendingBroadcastTest extends TestCase
             ->toOthers()
             ->send();
 
-        $this->assertTrue(true);
+        $this->assertBroadcastSent('PostUpdated');
+        $broadcasts = TestBroadcaster::getBroadcasts();
+        $this->assertCount(1, $broadcasts);
+        $this->assertEquals('user-socket', $broadcasts[0]['socket']);
     }
 
     /**
@@ -275,7 +298,9 @@ class PendingBroadcastTest extends TestCase
 
         unset($pending);
 
-        $this->assertTrue(true);
+        $this->assertBroadcastSent('PostCreated');
+        $broadcasts = TestBroadcaster::getBroadcasts();
+        $this->assertCount(1, $broadcasts);
     }
 
     /**
@@ -290,6 +315,9 @@ class PendingBroadcastTest extends TestCase
             ->data(['id' => 1])
             ->send();
 
-        $this->assertTrue(true);
+        $this->assertBroadcastSent('PostPublished');
+        $broadcasts = TestBroadcaster::getBroadcasts();
+        $this->assertCount(1, $broadcasts);
+        $this->assertEquals(['posts', 'feed', 'notifications'], $broadcasts[0]['channels']);
     }
 }

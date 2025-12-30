@@ -108,6 +108,7 @@ class BroadcastableInterfaceTest extends TestCase
         $this->testClass->setChannels($newChannel);
 
         $channels = $this->testClass->broadcastChannel();
+        $this->assertIsArray($channels);
         $this->assertCount(1, $channels);
         $this->assertEquals('new-channel', $channels[0]->getName());
     }

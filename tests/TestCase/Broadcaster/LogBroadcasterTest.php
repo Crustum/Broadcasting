@@ -111,10 +111,10 @@ class LogBroadcasterTest extends TestCase
      */
     private function createMockRequest(): ServerRequestInterface
     {
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('__toString')->willReturn('http://example.com/test');
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getUri')->willReturn($uri);
         $request->method('getMethod')->willReturn('POST');
         $request->method('getHeaders')->willReturn([]);

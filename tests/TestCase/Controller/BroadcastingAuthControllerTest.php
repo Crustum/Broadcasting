@@ -53,7 +53,7 @@ class BroadcastingAuthControllerTest extends TestCase
     protected function clearBroadcastingConfigurations(): void
     {
         foreach (Broadcasting::configured() as $configName) {
-            Broadcasting::drop($configName);
+            Broadcasting::drop((string)$configName);
         }
         Broadcasting::getRegistry()->reset();
 

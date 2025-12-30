@@ -10,8 +10,20 @@ use Crustum\Broadcasting\Event\QueueableInterface;
 
 class TestBroadcastableClass implements BroadcastableInterface, ConditionalInterface, QueueableInterface
 {
+    /**
+     * Channels array
+     *
+     * @var array<\Crustum\Broadcasting\Channel\Channel>
+     */
     protected array $channels = [];
+
     protected ?string $eventName = null;
+
+    /**
+     * Data array
+     *
+     * @var array<string, mixed>|null
+     */
     protected ?array $data = null;
     protected ?string $socket = null;
     protected bool $shouldBroadcast = true;
@@ -58,7 +70,13 @@ class TestBroadcastableClass implements BroadcastableInterface, ConditionalInter
         return $this->shouldBroadcast;
     }
 
-    public function setChannels(Channel|array|string $channels): self
+    /**
+     * Set channels
+     *
+     * @param \Crustum\Broadcasting\Channel\Channel|array<\Crustum\Broadcasting\Channel\Channel>|string $channels Channels
+     * @return $this
+     */
+    public function setChannels(Channel|array|string $channels)
     {
         if (is_string($channels)) {
             $this->channels = [new Channel($channels)];
@@ -78,7 +96,13 @@ class TestBroadcastableClass implements BroadcastableInterface, ConditionalInter
         return $this;
     }
 
-    public function setData(?array $data): self
+    /**
+     * Set data
+     *
+     * @param array<string, mixed>|null $data Data
+     * @return $this
+     */
+    public function setData(?array $data)
     {
         $this->data = $data;
 

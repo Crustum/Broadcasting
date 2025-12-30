@@ -263,7 +263,9 @@ class BroadcasterRegistryTest extends TestCase
         $broadcaster2 = $this->registry->load('instance2', $config2);
 
         $this->assertNotSame($broadcaster1, $broadcaster2);
-        $this->assertNotEquals($broadcaster1->getConfig('key'), $broadcaster2->getConfig('key'));
+        $config1 = $broadcaster1->getConfig();
+        $config2 = $broadcaster2->getConfig();
+        $this->assertNotEquals($config1['key'], $config2['key']);
     }
 
     /**

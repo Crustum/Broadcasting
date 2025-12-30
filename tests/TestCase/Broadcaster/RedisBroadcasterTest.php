@@ -51,8 +51,6 @@ class RedisBroadcasterTest extends TestCase
      */
     protected function tearDown(): void
     {
-        unset($this->redisBroadcaster);
-
         parent::tearDown();
     }
 
