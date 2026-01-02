@@ -10,7 +10,6 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * A no-op broadcaster implementation that discards all broadcast attempts.
  * Useful for testing and development environments where broadcasting is disabled.
- * Follows CakePHP conventions with explicit getter/setter methods.
  *
  * @package Crustum\Broadcasting\Broadcaster
  */
@@ -71,7 +70,6 @@ class NullBroadcaster extends BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Get the broadcaster name.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return string
      */
@@ -82,7 +80,6 @@ class NullBroadcaster extends BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Set broadcaster configuration.
-     * Following CakePHP convention for explicit setter methods.
      *
      * @param array<string, mixed> $config Configuration array
      * @return void
@@ -94,7 +91,6 @@ class NullBroadcaster extends BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Get broadcaster configuration.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return array<string, mixed>
      */

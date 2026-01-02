@@ -320,4 +320,175 @@ class PendingBroadcastTest extends TestCase
         $this->assertCount(1, $broadcasts);
         $this->assertEquals(['posts', 'feed', 'notifications'], $broadcasts[0]['channels']);
     }
+
+    /**
+     * Test delay() sets delay option
+     *
+     * @return void
+     */
+    public function testDelay(): void
+    {
+        $pending = Broadcasting::to('posts')
+            ->event('PostCreated')
+            ->delay(60);
+
+        $this->assertInstanceOf(PendingBroadcast::class, $pending);
+
+        $pending->queue('broadcasting');
+
+        $queued = TestQueueAdapter::getQueuedBroadcastsByEvent('PostCreated');
+        $this->assertCount(1, $queued);
+        $this->assertArrayHasKey('options', $queued[0]);
+        $this->assertEquals(60, $queued[0]['options']['delay']);
+    }
+
+    /**
+     * Test expires() sets expiration option
+     *
+     * @return void
+     */
+    public function testExpires(): void
+    {
+        $pending = Broadcasting::to('posts')
+            ->event('PostCreated')
+            ->expires(3600);
+
+        $this->assertInstanceOf(PendingBroadcast::class, $pending);
+
+        $pending->queue('broadcasting');
+
+        $queued = TestQueueAdapter::getQueuedBroadcastsByEvent('PostCreated');
+        $this->assertCount(1, $queued);
+        $this->assertArrayHasKey('options', $queued[0]);
+        $this->assertEquals(3600, $queued[0]['options']['expires']);
+    }
+
+    /**
+     * Test priority() sets priority option
+     *
+     * @return void
+     */
+    public function testPriority(): void
+    {
+        $pending = Broadcasting::to('posts')
+            ->event('PostCreated')
+            ->priority('high');
+
+        $this->assertInstanceOf(PendingBroadcast::class, $pending);
+
+        $pending->queue('broadcasting');
+
+        $queued = TestQueueAdapter::getQueuedBroadcastsByEvent('PostCreated');
+        $this->assertCount(1, $queued);
+        $this->assertArrayHasKey('options', $queued[0]);
+        $this->assertEquals('high', $queued[0]['options']['priority']);
+    }
+
+    /**
+     * Test skip() prevents broadcast sending
+     *
+     * @return void
+     */
+    public function testSkip(): void
+    {
+        Broadcasting::to('posts')
+            ->event('PostCreated')
+            ->data(['id' => 1])
+            ->skip()
+            ->send();
+
+        $this->assertNoBroadcastsSent();
+    }
+
+    /**
+     * Test skip() prevents broadcast queuing
+     *
+     * @return void
+     */
+    public function testSkipPreventsQueuing(): void
+    {
+        Broadcasting::to('posts')
+            ->event('PostCreated')
+            ->data(['id' => 1])
+            ->skip()
+            ->queue('broadcasting');
+
+        $this->assertNoBroadcastsQueued();
+        $this->assertNoBroadcastsSent();
+    }
+
+    /**
+     * Test fluent chain with all queue options
+     *
+     * @return void
+     */
+    public function testFluentChainWithAllQueueOptions(): void
+    {
+        Broadcasting::to('posts')
+            ->event('PostCreated')
+            ->data(['id' => 1])
+            ->delay(60)
+            ->expires(3600)
+            ->priority('high')
+            ->queue('broadcasting');
+
+        $queued = TestQueueAdapter::getQueuedBroadcastsByEvent('PostCreated');
+        $this->assertCount(1, $queued);
+        $options = $queued[0]['options'];
+        $this->assertEquals(60, $options['delay']);
+        $this->assertEquals(3600, $options['expires']);
+        $this->assertEquals('high', $options['priority']);
+    }
+
+    /**
+     * Test delay() returns fluent interface
+     *
+     * @return void
+     */
+    public function testDelayReturnsFluentInterface(): void
+    {
+        $pending = Broadcasting::to('posts');
+        $result = $pending->delay(60);
+
+        $this->assertSame($pending, $result);
+    }
+
+    /**
+     * Test expires() returns fluent interface
+     *
+     * @return void
+     */
+    public function testExpiresReturnsFluentInterface(): void
+    {
+        $pending = Broadcasting::to('posts');
+        $result = $pending->expires(3600);
+
+        $this->assertSame($pending, $result);
+    }
+
+    /**
+     * Test priority() returns fluent interface
+     *
+     * @return void
+     */
+    public function testPriorityReturnsFluentInterface(): void
+    {
+        $pending = Broadcasting::to('posts');
+        $result = $pending->priority('high');
+
+        $this->assertSame($pending, $result);
+    }
+
+    /**
+     * Test skip() returns fluent interface
+     *
+     * @return void
+     */
+    public function testSkipReturnsFluentInterface(): void
+    {
+        $pending = Broadcasting::to('posts');
+        $result = $pending->skip();
+
+        $this->assertSame($pending, $result);
+    }
 }

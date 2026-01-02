@@ -8,7 +8,6 @@ namespace Crustum\Broadcasting\Channel;
  *
  * Represents an encrypted private channel for secure broadcasting.
  * Automatically prefixes channel names with 'private-encrypted-'.
- * Following CakePHP conventions with explicit getter methods.
  *
  * @package Crustum\Broadcasting\Channel
  */
@@ -26,7 +25,6 @@ class EncryptedPrivateChannel extends Channel
 
     /**
      * Get the original channel name without prefix.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return string
      */

@@ -15,7 +15,6 @@ use Redis;
  *
  * Broadcasting implementation using Redis pub/sub.
  * Handles channel pattern matching and connection pooling.
- * Following CakePHP conventions with explicit method names.
  *
  * @package Crustum\Broadcasting\Broadcaster
  */
@@ -184,7 +183,6 @@ LUA;
 
     /**
      * Get the broadcaster name.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return string
      */
@@ -206,7 +204,6 @@ LUA;
 
     /**
      * Get Redis connection.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return mixed Redis connection
      */
@@ -236,7 +233,6 @@ LUA;
 
     /**
      * Authenticate private channel.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param string $channel Channel name
      * @param mixed $user User data
@@ -253,7 +249,6 @@ LUA;
 
     /**
      * Authenticate presence channel.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param string $channel Channel name
      * @param mixed $user User data
@@ -275,7 +270,6 @@ LUA;
 
     /**
      * Format payload for broadcasting.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param array<string, mixed> $payload Payload data
      * @return array<string, mixed> Formatted payload
@@ -289,7 +283,6 @@ LUA;
 
     /**
      * Publish message to Redis channel.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param string $channel Channel name
      * @param string $message Message to publish

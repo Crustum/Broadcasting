@@ -41,7 +41,7 @@ use LogicException;
  *
  * Basic usage:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'saved',
  *         'Model.afterDelete' => 'deleted',
@@ -56,7 +56,7 @@ use LogicException;
  *
  * Custom event mapping:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'created',
  *         'Model.afterUpdate' => 'updated',
@@ -68,7 +68,7 @@ use LogicException;
  *
  * Custom channel callback:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'created',
  *     ],
@@ -80,7 +80,7 @@ use LogicException;
  *
  * Custom payload callback:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'saved',
  *     ],

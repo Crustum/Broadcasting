@@ -14,7 +14,6 @@ trait PusherChannelConventionsTrait
 {
     /**
      * Check if the channel is protected by authentication.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @param string $channel Channel name to check
      * @return bool True if channel requires authentication
@@ -26,7 +25,6 @@ trait PusherChannelConventionsTrait
 
     /**
      * Remove prefix from channel name.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @param string $channel Channel name to normalize
      * @return string Channel name without prefix

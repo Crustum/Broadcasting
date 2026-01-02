@@ -25,7 +25,6 @@ class PrivateChannel extends Channel
 
     /**
      * Get the channel type.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return string
      */
@@ -36,7 +35,6 @@ class PrivateChannel extends Channel
 
     /**
      * Get the original channel name without prefix.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return string
      */
