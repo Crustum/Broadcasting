@@ -15,7 +15,7 @@ class OrdersFixture extends TestFixture
      *
      * @var array<array<string, mixed>>
      */
-    public array $records = [
+    public $records = [
         [
             'id' => 1,
             'user_id' => 1,

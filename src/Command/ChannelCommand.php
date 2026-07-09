@@ -10,6 +10,7 @@ use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
 use Cake\Utility\Inflector;
+use Crustum\Broadcasting\Polyfill\StringFunctions;
 
 /**
  * Command for generating Channel authorization classes.
@@ -29,8 +30,9 @@ class ChannelCommand extends BakeCommand
      * Path to Channel directory
      *
      * @var string
+     * @phpcsSuppress SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingNativeTypeHint
      */
-    public string $pathFragment = 'Broadcasting/';
+    public $pathFragment = 'Broadcasting/';
 
     /**
      * Execute the command.
@@ -52,8 +54,7 @@ class ChannelCommand extends BakeCommand
 
         $name = $this->_getName($name);
 
-        // Ensure Channel suffix
-        if (!str_ends_with($name, 'Channel')) {
+        if (!StringFunctions::endsWith($name, 'Channel')) {
             $name .= 'Channel';
         }
 

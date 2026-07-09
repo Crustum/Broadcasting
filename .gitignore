@@ -4,6 +4,8 @@
 /tools/
 
 # IDE files
+.claude/
+.cursor/
 .idea/
 .vscode/
 *.sublime-project

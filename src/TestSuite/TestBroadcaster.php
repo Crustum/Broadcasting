@@ -85,7 +85,7 @@ class TestBroadcaster extends NullBroadcaster
      * @param array<string>|string|null $connections Connection names to replace, or null for all configured
      * @return void
      */
-    public static function replaceAllBroadcasters(string|array|null $connections = null): void
+    public static function replaceAllBroadcasters(array|string|null $connections = null): void
     {
         if ($connections === null) {
             $connections = Broadcasting::configured();

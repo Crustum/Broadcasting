@@ -33,6 +33,10 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
      */
     public function bootstrap(PluginApplicationInterface $app): void
     {
+        if (Configure::read('Broadcasting') === null) {
+            Configure::load('Crustum/Broadcasting.broadcasting', 'default', false);
+        }
+
         $broadcastingConfig = Configure::read('Broadcasting.connections');
         if ($broadcastingConfig && is_array($broadcastingConfig)) {
             Broadcasting::initFromConfigure($broadcastingConfig);
@@ -61,6 +65,7 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
      */
     public function console(CommandCollection $commands): CommandCollection
     {
+        $commands = parent::console($commands);
         $commands->add('bake channel', ChannelCommand::class);
 
         return $commands;

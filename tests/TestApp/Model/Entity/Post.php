@@ -15,7 +15,7 @@ class Post extends Entity
      *
      * @var array<string, bool>
      */
-    protected array $_accessible = [
+    protected $_accessible = [
         'user_id' => true,
         'title' => true,
         'content' => true,

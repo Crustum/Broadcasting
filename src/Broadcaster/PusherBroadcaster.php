@@ -9,6 +9,7 @@ use Cake\Collection\Collection;
 use Cake\Datasource\EntityInterface;
 use Cake\Http\ServerRequest;
 use Crustum\Broadcasting\Exception\BroadcastingException;
+use Crustum\Broadcasting\Polyfill\StringFunctions;
 use Crustum\Broadcasting\Trait\PusherChannelConventionsTrait;
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
@@ -216,7 +217,7 @@ class PusherBroadcaster extends BaseBroadcaster
             throw new BroadcastingException('Socket ID not found in request.', 400);
         }
 
-        if ($channelName !== null && str_starts_with($channelName, 'presence-')) {
+        if ($channelName !== null && StringFunctions::startsWith($channelName, 'presence-')) {
             $user = $this->resolveUserFromRequest($request);
             if (!$user) {
                 throw new BroadcastingException('User not authenticated for presence channel.', 403);
@@ -224,7 +225,12 @@ class PusherBroadcaster extends BaseBroadcaster
 
             $userData = $this->getUserData($user);
 
-            $userId = $user instanceof EntityInterface ? $user->get('id') : $user['id'];
+            if ($user instanceof EntityInterface) {
+                $userId = $user->get('id');
+            } else {
+                /** @phpstan-ignore-next-line offsetAccess.notFound */
+                $userId = $user['id'];
+            }
             $authString = $this->pusherClient->authorizePresenceChannel(
                 $channelName,
                 $socketId,

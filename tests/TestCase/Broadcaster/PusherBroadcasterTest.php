@@ -29,7 +29,7 @@ class PusherBroadcasterTest extends TestCase
      *
      * @var array<string>
      */
-    protected array $fixtures = [
+    protected $fixtures = [
         'plugin.Crustum\Broadcasting.Orders',
         'plugin.Crustum\Broadcasting.Rooms',
     ];

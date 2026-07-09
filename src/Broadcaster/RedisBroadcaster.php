@@ -5,6 +5,7 @@ namespace Crustum\Broadcasting\Broadcaster;
 
 use Cake\Log\Log;
 use Crustum\Broadcasting\Exception\BroadcastingException;
+use Crustum\Broadcasting\Polyfill\StringFunctions;
 use Crustum\Broadcasting\Trait\PusherChannelConventionsTrait;
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
@@ -68,11 +69,11 @@ class RedisBroadcaster extends BaseBroadcaster
         if ($this->isGuardedChannel($channelName)) {
             $normalizedChannel = $this->normalizeChannelName($channelName);
 
-            if (str_starts_with($channelName, 'private-')) {
+            if (StringFunctions::startsWith($channelName, 'private-')) {
                 return $this->authenticatePrivateChannel($normalizedChannel, $user);
             }
 
-            if (str_starts_with($channelName, 'presence-')) {
+            if (StringFunctions::startsWith($channelName, 'presence-')) {
                 return $this->authenticatePresenceChannel($normalizedChannel, $user);
             }
         }

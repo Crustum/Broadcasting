@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Crustum\Broadcasting\Trait;
 
+use Crustum\Broadcasting\Polyfill\StringFunctions;
+
 /**
  * Pusher Channel Conventions Trait
  *
@@ -20,7 +22,7 @@ trait PusherChannelConventionsTrait
      */
     public function isGuardedChannel(string $channel): bool
     {
-        return str_starts_with($channel, 'private-') || str_starts_with($channel, 'presence-');
+        return StringFunctions::startsWith($channel, 'private-') || StringFunctions::startsWith($channel, 'presence-');
     }
 
     /**
@@ -34,7 +36,7 @@ trait PusherChannelConventionsTrait
         $prefixes = ['private-encrypted-', 'private-', 'presence-'];
 
         foreach ($prefixes as $prefix) {
-            if (str_starts_with($channel, $prefix)) {
+            if (StringFunctions::startsWith($channel, $prefix)) {
                 return substr($channel, strlen($prefix));
             }
         }

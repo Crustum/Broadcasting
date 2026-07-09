@@ -4,12 +4,12 @@ declare(strict_types=1);
 namespace Crustum\Broadcasting\Test\TestCase\Registry;
 
 use BadMethodCallException;
-use Cake\Core\Exception\CakeException;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\BroadcasterInterface;
 use Crustum\Broadcasting\Broadcaster\LogBroadcaster;
 use Crustum\Broadcasting\Broadcaster\NullBroadcaster;
 use Crustum\Broadcasting\Registry\BroadcasterRegistry;
+use RuntimeException;
 
 /**
  * Broadcaster Registry Test
@@ -156,8 +156,8 @@ class BroadcasterRegistryTest extends TestCase
      */
     public function testGetNonLoadedBroadcasterThrowsException(): void
     {
-        $this->expectException(CakeException::class);
-        $this->expectExceptionMessage('Unknown object `non_existent`.');
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unknown object "non_existent"');
 
         $this->registry->get('non_existent');
     }

@@ -41,7 +41,7 @@ class BroadcastingAuthControllerTest extends TestCase
      *
      * @var array<string>
      */
-    protected array $fixtures = [
+    protected $fixtures = [
         'plugin.Crustum/Broadcasting.Users',
     ];
 

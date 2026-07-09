@@ -17,16 +17,15 @@ class RoomsFixture extends TestFixture
      *
      * @var string
      */
-    public string $table = 'rooms';
+    public $table = 'rooms';
 
     /**
      * Fields
      *
      * @var array<string, mixed>
      */
-    public array $fields = [
+    public $fields = [
         'id' => ['type' => 'integer', 'length' => null, 'unsigned' => false, 'null' => false, 'default' => null, 'comment' => '', 'autoIncrement' => true, 'precision' => null],
-        'user_id' => ['type' => 'integer', 'length' => null, 'unsigned' => false, 'null' => false, 'default' => null, 'comment' => '', 'precision' => null],
         '_constraints' => [
             'primary' => ['type' => 'primary', 'columns' => ['id'], 'length' => []],
         ],
@@ -42,7 +41,6 @@ class RoomsFixture extends TestFixture
         $this->records = [
             [
                 'id' => 456,
-                'user_id' => 1,
             ],
         ];
         parent::init();

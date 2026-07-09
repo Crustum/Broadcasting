@@ -100,8 +100,9 @@ class BroadcastingBehavior extends Behavior
      * Default configuration
      *
      * @var array<string, mixed>
+     * @phpcsSuppress SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingNativeTypeHint
      */
-    protected array $_defaultConfig = [
+    protected $_defaultConfig = [
         'implementedFinders' => [],
         'events' => [
             'Model.afterSave' => 'saved',

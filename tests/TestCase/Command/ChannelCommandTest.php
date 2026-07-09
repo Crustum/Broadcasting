@@ -92,7 +92,7 @@ class ChannelCommandTest extends TestCase
             ->with($this->stringContains('Example: bin/cake bake channel Order'));
 
         $args = $this->createStub(Arguments::class);
-        $args->method('getArgumentAt')->with(0)->willReturn(null);
+        $args->method('getArgumentAt')->willReturn(null);
 
         $result = $command->execute($args, $io);
 

@@ -23,7 +23,7 @@ class BroadcastingIntegrationTest extends TestCase
      *
      * @var array<string>
      */
-    protected array $fixtures = [
+    protected $fixtures = [
         'plugin.Crustum/Broadcasting.Users',
         'plugin.Crustum/Broadcasting.Orders',
     ];

@@ -58,7 +58,7 @@ interface BroadcastingTraitInterface
      * @param \Cake\Datasource\EntityInterface|\Closure|array<string, mixed>|null $payload Payload configuration
      * @return void
      */
-    public function setBroadcastPayload(Closure|array|EntityInterface|null $payload): void;
+    public function setBroadcastPayload(EntityInterface|Closure|array|null $payload): void;
 
     /**
      * Set broadcast connection
@@ -66,7 +66,7 @@ interface BroadcastingTraitInterface
      * @param \Closure|string|null $connection Connection name or callback
      * @return void
      */
-    public function setBroadcastConnection(string|Closure|null $connection): void;
+    public function setBroadcastConnection(Closure|string|null $connection): void;
 
     /**
      * Set broadcast queue

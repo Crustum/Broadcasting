@@ -58,7 +58,7 @@ class BroadcasterRegistry extends ObjectRegistry
      * @return \Crustum\Broadcasting\Broadcaster\BroadcasterInterface The constructed BroadcasterInterface class.
      * @throws \Cake\Core\Exception\CakeException When the broadcaster cannot be initialized.
      */
-    protected function _create(object|string $class, string $alias, array $config): BroadcasterInterface
+    protected function _create($class, string $alias, array $config): BroadcasterInterface
     {
         if (is_object($class)) {
             $instance = $class;

@@ -17,14 +17,14 @@ class UsersFixture extends TestFixture
      *
      * @var string
      */
-    public string $table = 'users';
+    public $table = 'users';
 
     /**
      * Fields
      *
      * @var array<string, mixed>
      */
-    public array $fields = [
+    public $fields = [
         'id' => ['type' => 'integer', 'length' => 11, 'unsigned' => false, 'null' => false, 'default' => null, 'comment' => '', 'autoIncrement' => true, 'precision' => null],
         'username' => ['type' => 'string', 'length' => 255, 'null' => false, 'default' => null, 'collate' => 'utf8mb4_unicode_ci', 'comment' => '', 'precision' => null],
         'email' => ['type' => 'string', 'length' => 255, 'null' => false, 'default' => null, 'collate' => 'utf8mb4_unicode_ci', 'comment' => '', 'precision' => null],

@@ -12,8 +12,8 @@ use Cake\ORM\Entity;
  * @property int $user_id
  * @property float $total
  * @property string $status
- * @property \Cake\I18n\DateTime|null $created
- * @property \Cake\I18n\DateTime|null $modified
+ * @property \Cake\I18n\FrozenTime|null $created
+ * @property \Cake\I18n\FrozenTime|null $modified
  */
 class Order extends Entity
 {
@@ -22,7 +22,7 @@ class Order extends Entity
      *
      * @var array<string, bool>
      */
-    protected array $_accessible = [
+    protected $_accessible = [
         'user_id' => true,
         'total' => true,
         'status' => true,

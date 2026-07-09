@@ -33,8 +33,11 @@ trait SocketAwareTrait
             $socketId = $request->getHeaderLine('X-Socket-ID');
             if (empty($socketId)) {
                 $socketId = $request->getQuery('socket_id');
+                if (is_array($socketId)) {
+                    $socketId = (string)reset($socketId);
+                }
             }
-            $this->socket = $socketId ?: null;
+            $this->socket = is_string($socketId) && $socketId !== '' ? $socketId : null;
         }
 
         return $this;

@@ -52,7 +52,7 @@ trait BroadcastingTrait
      *
      * @var \Cake\Datasource\EntityInterface|\Closure|array<string, mixed>|null
      */
-    private Closure|array|EntityInterface|null $_broadcastingPayload = null;
+    private EntityInterface|Closure|array|null $_broadcastingPayload = null;
 
     /**
      * Broadcasting connection configuration
@@ -172,7 +172,7 @@ trait BroadcastingTrait
      * @param \Cake\Datasource\EntityInterface|\Closure|array<string, mixed>|null $payload Payload configuration
      * @return void
      */
-    public function setBroadcastPayload(Closure|array|EntityInterface|null $payload): void
+    public function setBroadcastPayload(EntityInterface|Closure|array|null $payload): void
     {
         $this->_broadcastingPayload = $payload;
     }
@@ -183,7 +183,7 @@ trait BroadcastingTrait
      * @param \Closure|string|null $connection Connection name or callback
      * @return void
      */
-    public function setBroadcastConnection(string|Closure|null $connection): void
+    public function setBroadcastConnection(Closure|string|null $connection): void
     {
         $this->_broadcastingConnection = $connection;
     }

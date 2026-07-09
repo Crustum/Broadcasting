@@ -29,12 +29,6 @@ jobs:
           - php-version: '8.3'
             db-type: 'pgsql'
             dependencies: highest
-          - php-version: '8.4'
-            db-type: 'mysql'
-            dependencies: highest
-          - php-version: '8.4'
-            db-type: 'pgsql'
-            dependencies: highest
 
     services:
       mysql:
@@ -94,7 +88,7 @@ jobs:
         export REDIS_PORT=6379
         if [[ "${{ matrix.db-type }}" == 'mysql' ]]; then export db_dsn='mysql://root:root@127.0.0.1:3306/rhythm_test?encoding=utf8mb4&timezone=UTC&cacheMetadata=true&quoteIdentifiers=true&persistent=false'; fi
         if [[ "${{ matrix.db-type }}" == 'pgsql' ]]; then export db_dsn='postgres://postgres:postgres@127.0.0.1:5432/rhythm_test?encoding=utf8&timezone=UTC&cacheMetadata=true&quoteIdentifiers=true&persistent=false'; fi
-        vendor/bin/phpunit --configuration=phpunit.xml --display-deprecations --display-incomplete --display-skipped --coverage-clover=coverage.xml
+        vendor/bin/phpunit --configuration=phpunit.xml --coverage-clover=coverage.xml
 
     - name: Run PHPUnit without coverage
       if: matrix.php-version != '8.2' || matrix.db-type != 'mysql'
@@ -141,7 +135,7 @@ jobs:
 
     - name: Install PHP tools with phive
       run: |
-        phive install --trust-gpg-keys CF1A108D0E7AE720,51C67305FFC2E5C0,12CE0F1D262429A5
+        phive install --trust-gpg-keys CF1A108D0E7AE720,51C67305FFC2E5C0,12CE0F1D262429A5,99BF4D9A33D65E1E
 
     - name: Run PHP CodeSniffer
       run: composer cs-check

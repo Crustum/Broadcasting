@@ -379,7 +379,7 @@ class Broadcasting
      * @param string|null $socket Optional socket ID to exclude from broadcast
      * @return void
      */
-    public static function broadcast(string|array $channels, string $event, array $payload = [], string $config = 'default', ?string $socket = null): void
+    public static function broadcast(array|string $channels, string $event, array $payload = [], string $config = 'default', ?string $socket = null): void
     {
         $pending = static::to($channels)
             ->event($event)
@@ -404,7 +404,7 @@ class Broadcasting
      * @return void
      * @internal
      */
-    public static function queueBroadcast(string|array $channels, string $event, array $payload = [], string $config = 'default', array $options = []): void
+    public static function queueBroadcast(array|string $channels, string $event, array $payload = [], string $config = 'default', array $options = []): void
     {
         $channelArray = is_array($channels) ? $channels : [$channels];
 

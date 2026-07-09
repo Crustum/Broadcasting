@@ -11,8 +11,6 @@ use Crustum\Broadcasting\TestSuite\Constraint\Broadcasting\BroadcastSentTimes;
 use Crustum\Broadcasting\TestSuite\Constraint\Broadcasting\BroadcastSentToChannel;
 use Crustum\Broadcasting\TestSuite\Constraint\Broadcasting\BroadcastSentViaConnection;
 use Crustum\Broadcasting\TestSuite\Constraint\Broadcasting\NoBroadcastSent;
-use PHPUnit\Framework\Attributes\After;
-use PHPUnit\Framework\Attributes\Before;
 
 /**
  * Broadcasting Trait
@@ -46,9 +44,9 @@ trait BroadcastingTrait
      * Replaces the broadcaster with TestBroadcaster
      * to capture broadcasts instead of sending them.
      *
+     * @before
      * @return void
      */
-    #[Before]
     public function setupTestBroadcaster(): void
     {
         foreach (Broadcasting::configured() as $config) {
@@ -71,9 +69,9 @@ trait BroadcastingTrait
      *
      * Clears all captured broadcasts after each test.
      *
+     * @after
      * @return void
      */
-    #[After]
     public function cleanupBroadcastingTrait(): void
     {
         TestBroadcaster::clearBroadcasts();
