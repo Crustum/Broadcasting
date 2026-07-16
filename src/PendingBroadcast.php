@@ -89,6 +89,20 @@ class PendingBroadcast
     protected bool $skipped = false;
 
     /**
+     * Whether the queued job should use Cake Queue uniqueness ($shouldBeUnique).
+     *
+     * @var bool
+     */
+    protected bool $unique = false;
+
+    /**
+     * Optional key included in unique job data hash (Cake Queue getUniqueId).
+     *
+     * @var string|null
+     */
+    protected ?string $uniqueKey = null;
+
+    /**
      * Constructor.
      *
      * @param \Crustum\Broadcasting\Channel\Channel|array<string|\Crustum\Broadcasting\Channel\Channel>|string $channels Channels
@@ -130,6 +144,20 @@ class PendingBroadcast
     public function connection(string $name): static
     {
         $this->connectionName = $name;
+
+        return $this;
+    }
+
+    /**
+     * Mark the queued broadcast as unique via Cake Queue `$shouldBeUnique`.
+     *
+     * @param bool $unique Whether uniqueness is required
+     * @param string|null $uniqueKey Optional key folded into the unique job data hash
+     */
+    public function unique(bool $unique = true, ?string $uniqueKey = null): static
+    {
+        $this->unique = $unique;
+        $this->uniqueKey = $uniqueKey;
 
         return $this;
     }
@@ -265,6 +293,13 @@ class PendingBroadcast
 
         if ($this->priority !== null) {
             $options['priority'] = $this->priority;
+        }
+
+        if ($this->unique) {
+            $options['unique'] = true;
+            if ($this->uniqueKey !== null) {
+                $options['uniqueKey'] = $this->uniqueKey;
+            }
         }
 
         Broadcasting::queueBroadcast(

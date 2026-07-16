@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Crustum\Broadcasting\Exception;
 
 use Exception;
+use Throwable;
 
 /**
  * Broadcasting Exception
@@ -26,9 +27,9 @@ class BroadcastingException extends Exception
      *
      * @param string $message Exception message
      * @param int $code Exception code
-     * @param \Exception|null $previous Previous exception
+     * @param \Throwable|null $previous Previous exception
      */
-    public function __construct(string $message = '', int $code = self::DEFAULT_CODE, ?Exception $previous = null)
+    public function __construct(string $message = '', int $code = self::DEFAULT_CODE, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
     }

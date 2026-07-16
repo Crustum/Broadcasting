@@ -20,6 +20,27 @@ use Interop\Queue\Processor as InteropProcessor;
 class BroadcastJob implements JobInterface
 {
     /**
+     * Resolve a display name for custom job identification / unique locks.
+     *
+     * Prefers the underlying event class when present (Laravel displayName parity).
+     *
+     * @param array<string, mixed> $data Job payload
+     * @return string
+     */
+    public static function displayName(array $data): string
+    {
+        if (!empty($data['eventClass']) && is_string($data['eventClass'])) {
+            return $data['eventClass'];
+        }
+
+        if (!empty($data['eventName']) && is_string($data['eventName'])) {
+            return $data['eventName'];
+        }
+
+        return self::class;
+    }
+
+    /**
      * Execute the broadcast job
      *
      * @param \Cake\Queue\Job\Message $message Queue message

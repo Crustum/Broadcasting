@@ -7,6 +7,7 @@ use ArrayAccess;
 use Authentication\IdentityInterface;
 use Cake\Collection\Collection;
 use Cake\Datasource\EntityInterface;
+use Cake\Http\Response;
 use Cake\Http\ServerRequest;
 use Closure;
 use Crustum\Broadcasting\Exception\BroadcastingException;
@@ -35,9 +36,16 @@ class PusherBroadcaster extends BaseBroadcaster
     protected Pusher $pusherClient;
 
     /**
+     * Whether JSONP callbacks are allowed on authorization responses.
+     *
+     * @var bool
+     */
+    protected bool $allowJsonp = false;
+
+    /**
      * Constructor.
      *
-     * @param array{driver?: string, key?: string, secret?: string, app_id?: string, options?: array<string, mixed>} $config Pusher configuration
+     * @param array{driver?: string, key?: string, secret?: string, app_id?: string, jsonp?: bool, options?: array<string, mixed>} $config Pusher configuration
      */
     public function __construct(array $config = [])
     {
@@ -54,7 +62,18 @@ class PusherBroadcaster extends BaseBroadcaster
             throw new BroadcastingException("Pusher configuration 'app_id' is required.", 500);
         }
 
+        $this->allowJsonp = (bool)($config['jsonp'] ?? false);
         $this->pusherClient = $this->createPusherClient($config);
+    }
+
+    /**
+     * Whether JSONP callbacks are allowed for authorization responses.
+     *
+     * @return bool
+     */
+    public function allowsJsonp(): bool
+    {
+        return $this->allowJsonp;
     }
 
     /**
@@ -82,7 +101,7 @@ class PusherBroadcaster extends BaseBroadcaster
      * @throws \Crustum\Broadcasting\Exception\BroadcastingException
      * @throws \Crustum\Broadcasting\Exception\InvalidChannelException
      */
-    public function auth(ServerRequestInterface $request): array
+    public function auth(ServerRequestInterface $request): array|Response
     {
         $channelName = $this->getChannelNameFromRequest($request);
         $socketId = $this->getSocketIdFromRequest($request);
@@ -105,7 +124,16 @@ class PusherBroadcaster extends BaseBroadcaster
             throw new BroadcastingException('Missing required parameters: channel_name', 400);
         }
 
-        return $this->verifyUserCanAccessChannel($request, $channelName);
+        $result = $this->verifyUserCanAccessChannel($request, $channelName);
+        if ($result instanceof Response) {
+            return $result;
+        }
+
+        if (!is_array($result)) {
+            throw new BroadcastingException('Invalid authentication response type', 500);
+        }
+
+        return $result;
     }
 
     /**
@@ -210,9 +238,9 @@ class PusherBroadcaster extends BaseBroadcaster
      *
      * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
      * @param mixed $result Authentication result
-     * @return array<string, mixed>
+     * @return \Cake\Http\Response|array<string, mixed>
      */
-    public function validAuthenticationResponse(ServerRequestInterface $request, mixed $result): array
+    public function validAuthenticationResponse(ServerRequestInterface $request, mixed $result): array|Response
     {
         $channelName = $this->getChannelNameFromRequest($request);
         $socketId = $this->getSocketIdFromRequest($request);
@@ -237,12 +265,7 @@ class PusherBroadcaster extends BaseBroadcaster
                 $userData['user_info'],
             );
 
-            $decoded = json_decode($authString, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new BroadcastingException('JSON decode error: ' . json_last_error_msg(), 500);
-            }
-
-            return $decoded;
+            return $this->decodePusherResponse($request, $authString);
         }
 
         if ($channelName === null) {
@@ -251,12 +274,58 @@ class PusherBroadcaster extends BaseBroadcaster
 
         $authString = $this->pusherClient->authorizeChannel($channelName, $socketId);
 
-        $decoded = json_decode($authString, true);
+        return $this->decodePusherResponse($request, $authString);
+    }
+
+    /**
+     * Decode a Pusher authorization response, optionally as JSONP when enabled.
+     *
+     * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
+     * @param string $response Raw Pusher auth response
+     * @return \Cake\Http\Response|array<string, mixed>
+     * @throws \Crustum\Broadcasting\Exception\BroadcastingException
+     */
+    protected function decodePusherResponse(ServerRequestInterface $request, string $response): array|Response
+    {
+        $decoded = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new BroadcastingException('JSON decode error: ' . json_last_error_msg(), 500);
         }
 
-        return $decoded;
+        $callback = $this->getCallbackFromRequest($request);
+        if ($callback === null || $callback === '' || !$this->allowJsonp) {
+            return $decoded;
+        }
+
+        $json = json_encode($decoded);
+        if ($json === false) {
+            throw new BroadcastingException('JSON encode error for JSONP response', 500);
+        }
+
+        return (new Response())
+            ->withType('application/javascript')
+            ->withStringBody($callback . '(' . $json . ');');
+    }
+
+    /**
+     * Resolve a JSONP callback name from the request.
+     *
+     * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
+     * @return string|null
+     */
+    protected function getCallbackFromRequest(ServerRequestInterface $request): ?string
+    {
+        $callback = $request->getQueryParams()['callback'] ?? null;
+        if (is_string($callback) && $callback !== '') {
+            return $callback;
+        }
+
+        $body = $request->getParsedBody();
+        if (is_array($body) && isset($body['callback']) && is_string($body['callback'])) {
+            return $body['callback'] !== '' ? $body['callback'] : null;
+        }
+
+        return null;
     }
 
     /**

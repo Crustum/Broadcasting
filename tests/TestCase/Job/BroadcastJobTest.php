@@ -7,6 +7,7 @@ use Cake\Queue\Job\Message;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\Job\BroadcastJob;
+use Crustum\Broadcasting\Test\TestApp\Event\TestUniqueBroadcastableClass;
 use Interop\Queue\Message as QueueMessage;
 use Interop\Queue\Processor as InteropProcessor;
 
@@ -101,6 +102,35 @@ class BroadcastJobTest extends TestCase
         $result = $this->broadcastJob->execute($message);
 
         $this->assertEquals(InteropProcessor::ACK, $result);
+    }
+
+    /**
+     * Test displayName prefers eventClass for unique job identification
+     *
+     * @return void
+     */
+    public function testDisplayNamePrefersEventClass(): void
+    {
+        $displayName = BroadcastJob::displayName([
+            'eventClass' => TestUniqueBroadcastableClass::class,
+            'eventName' => 'UniqueEvent',
+        ]);
+
+        $this->assertSame(TestUniqueBroadcastableClass::class, $displayName);
+    }
+
+    /**
+     * Test displayName falls back to eventName
+     *
+     * @return void
+     */
+    public function testDisplayNameFallsBackToEventName(): void
+    {
+        $displayName = BroadcastJob::displayName([
+            'eventName' => 'OrderCreated',
+        ]);
+
+        $this->assertSame('OrderCreated', $displayName);
     }
 
     /**

@@ -68,6 +68,10 @@ class BroadcastingAuthController extends Controller
             $broadcaster = Broadcasting::get();
             $authData = $broadcaster->auth($this->getRequest());
 
+            if ($authData instanceof Response) {
+                return $authData;
+            }
+
             $jsonData = json_encode($authData);
             if ($jsonData === false) {
                 return $this->errorResponse('Invalid JSON data', 500);

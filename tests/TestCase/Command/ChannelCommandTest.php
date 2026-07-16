@@ -70,6 +70,7 @@ class ChannelCommandTest extends TestCase
                     unlink($file);
                 }
             }
+
             $this->generatedFiles = [];
         }
     }
@@ -120,6 +121,7 @@ class ChannelCommandTest extends TestCase
             if ($key === 'verbose') {
                 return false;
             }
+
             if ($key === 'force') {
                 return false;
             }
@@ -187,6 +189,7 @@ class ChannelCommandTest extends TestCase
             if ($key === 'verbose') {
                 return false;
             }
+
             if ($key === 'force') {
                 return false;
             }
