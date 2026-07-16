@@ -1100,4 +1100,105 @@ class PusherBroadcasterTest extends TestCase
         $this->assertStringContainsString('presenceCallback(', (string)$result->getBody());
         $this->assertStringContainsString('test-key:presence-signature', (string)$result->getBody());
     }
+
+    /**
+     * Test bulkBroadcast uses triggerBatch in chunks of 10 by default
+     *
+     * @return void
+     */
+    public function testBulkBroadcastUsesTriggerBatch(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+        ];
+
+        $broadcasts = [];
+        for ($i = 0; $i < 25; $i++) {
+            $broadcasts[] = [
+                'channel' => 'user.' . $i,
+                'event' => 'Notify',
+                'data' => ['i' => $i],
+            ];
+        }
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->exactly(3))
+            ->method('triggerBatch')
+            ->willReturn((object)['status' => 200]);
+        $pusher->expects($this->never())
+            ->method('trigger');
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+        $broadcaster->bulkBroadcast($broadcasts, 10);
+    }
+
+    /**
+     * Test bulkBroadcast respects configured max_batch_size
+     *
+     * @return void
+     */
+    public function testBulkBroadcastRespectsMaxBatchSize(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+            'bulk' => [
+                'max_batch_size' => 5,
+            ],
+        ];
+
+        $broadcasts = [];
+        for ($i = 0; $i < 12; $i++) {
+            $broadcasts[] = [
+                'channel' => 'user.' . $i,
+                'event' => 'Notify',
+                'data' => ['i' => $i],
+            ];
+        }
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->exactly(3))
+            ->method('triggerBatch')
+            ->willReturn((object)['status' => 200]);
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+        $broadcaster->bulkBroadcast($broadcasts, 10);
+    }
+
+    /**
+     * Test bulkBroadcast includes socket_id in batch entries
+     *
+     * @return void
+     */
+    public function testBulkBroadcastPassesSocketId(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('triggerBatch')
+            ->with($this->callback(fn(array $batch): bool => count($batch) === 1
+                && $batch[0]['channel'] === 'user.1'
+                && $batch[0]['name'] === 'Notify'
+                && $batch[0]['data'] === ['ok' => true]
+                && ($batch[0]['socket_id'] ?? null) === '123.456'))
+            ->willReturn((object)['status' => 200]);
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+        $broadcaster->bulkBroadcast([
+            [
+                'channel' => 'user.1',
+                'event' => 'Notify',
+                'data' => ['ok' => true],
+                'socket' => '123.456',
+            ],
+        ]);
+    }
 }

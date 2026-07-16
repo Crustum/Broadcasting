@@ -75,6 +75,36 @@ class LogBroadcaster extends BaseBroadcaster implements BroadcasterInterface
     }
 
     /**
+     * Broadcast multiple personalized messages with a single summary log.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat broadcast specs
+     * @param int $chunkSize Unused for log driver
+     * @return void
+     */
+    public function bulkBroadcast(array $broadcasts, int $chunkSize = 100): void
+    {
+        $normalized = $this->normalizeBulkBroadcasts($broadcasts);
+        if ($normalized === []) {
+            return;
+        }
+
+        foreach ($normalized as $item) {
+            $payload = $item['data'];
+            if ($item['socket'] !== null) {
+                $payload['socket'] = $item['socket'];
+            }
+
+            $this->logBroadcast([$item['channel']], $item['event'], $payload);
+        }
+
+        Log::info(sprintf(
+            'Bulk Broadcasting %d messages: %s',
+            count($normalized),
+            (string)json_encode($normalized, JSON_PRETTY_PRINT),
+        ));
+    }
+
+    /**
      * Get the broadcaster name.
      *
      * @return string

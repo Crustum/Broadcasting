@@ -24,6 +24,7 @@
     - [Only to Others](#only-to-others)
     - [Customizing the Connection](#customizing-the-connection)
     - [Anonymous Events](#anonymous-events)
+    - [Bulk Broadcasting](#bulk-broadcasting)
 - [Receiving Broadcasts](#receiving-broadcasts)
     - [Listening for Events](#listening-for-events)
     - [Leaving a Channel](#leaving-a-channel)
@@ -814,6 +815,50 @@ Broadcasting::to('orders.' . $order->id)
     ->toOthers()
     ->send();
 ```
+
+<a name="bulk-broadcasting"></a>
+### Bulk Broadcasting
+
+Use `Broadcasting::bulk()` when each recipient needs a **different** payload (or event). Same-event fan-out to many channels already uses a single `trigger()` call; bulk is for personalized messages.
+
+- **Pusher:** `triggerBatch` (default chunk **100**, configurable via `bulk.max_batch_size`)
+- **Redis:** one Lua `eval` with channel/message pairs per chunk
+- **Log:** one summary `Log::info` for the whole batch (not N lines)
+
+```php
+use Crustum\Broadcasting\Broadcasting;
+
+$events = [];
+foreach ($students as $student) {
+    $events[] = new CourseProgressChangedEvent($course->id, $student->id, $student->progress);
+}
+
+Broadcasting::bulk($events);
+
+Broadcasting::bulk([
+    [
+        'channel' => 'private-user.1',
+        'event' => 'NotificationReceived',
+        'data' => ['title' => 'Hello'],
+    ],
+    [
+        'channel' => 'private-user.2',
+        'event' => 'NotificationReceived',
+        'data' => ['title' => 'Hi'],
+    ],
+]);
+```
+
+Queue large fan-outs with `queueBulk()`. Items are normalized to flat arrays before enqueue; each chunk becomes one `BulkBroadcastJob`:
+
+```php
+Broadcasting::queueBulk($events, 'default', [
+    'queue' => 'broadcasting',
+    'chunkSize' => 100,
+]);
+```
+
+In tests, assert queued bulk jobs with `assertBulkBroadcastQueued()`, `assertBulkBroadcastQueuedCount()`, `assertBulkBroadcastQueuedEvent()`, and `assertBulkBroadcastQueuedToChannel()`.
 
 <a name="receiving-broadcasts"></a>
 ## Receiving Broadcasts
@@ -1827,6 +1872,10 @@ The `BroadcastingTrait` provides the following assertion methods for your tests:
 | `assertBroadcastQueuedToChannel(string $channel, string $event)` | Assert a broadcast was queued to a channel |
 | `assertNoBroadcastsQueued()` | Assert no broadcasts were queued |
 | `assertBroadcastQueuedCount(int $count)` | Assert the total number of queued broadcasts |
+| `assertBulkBroadcastQueued()` | Assert at least one `BulkBroadcastJob` was queued |
+| `assertBulkBroadcastQueuedCount(int $count)` | Assert the number of queued `BulkBroadcastJob`s |
+| `assertBulkBroadcastQueuedEvent(string $event)` | Assert a bulk-queued item has the event |
+| `assertBulkBroadcastQueuedToChannel(string $channel, string $event)` | Assert a bulk-queued item for channel + event |
 
 Helper methods for retrieving captured broadcasts:
 
@@ -1837,4 +1886,6 @@ Helper methods for retrieving captured broadcasts:
 | `getBroadcastsToChannel(string $channel)` | Get broadcasts sent to a channel |
 | `getBroadcastsByConnection(string $connection)` | Get broadcasts sent via a connection |
 | `getQueuedJobs()` | Get all queued jobs |
+| `getQueuedBulkBroadcastJobs()` | Get queued `BulkBroadcastJob` entries |
+| `getQueuedBulkBroadcastItems()` | Flatten items from queued bulk jobs |
 | `getQueuedBroadcastsByEvent(string $event)` | Get queued broadcasts of a specific event |

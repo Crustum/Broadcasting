@@ -138,6 +138,101 @@ class RedisBroadcaster extends BaseBroadcaster
     }
 
     /**
+     * Broadcast multiple personalized messages via a single Lua eval.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat broadcast specs
+     * @param int $chunkSize Max channel/message pairs per eval
+     * @return void
+     */
+    public function bulkBroadcast(array $broadcasts, int $chunkSize = 100): void
+    {
+        $normalized = $this->normalizeBulkBroadcasts($broadcasts);
+        if ($normalized === []) {
+            return;
+        }
+
+        $maxBatchSize = (int)($this->config['bulk']['max_batch_size'] ?? 100);
+        if ($maxBatchSize < 1) {
+            $maxBatchSize = 100;
+        }
+
+        $chunkSize = max(1, min($chunkSize, $maxBatchSize));
+
+        foreach (array_chunk($normalized, $chunkSize) as $chunk) {
+            $this->sendBulkToRedis($chunk);
+        }
+    }
+
+    /**
+     * Publish personalized bulk items with one Lua script call.
+     *
+     * ARGV layout: channel1, message1, channel2, message2, ...
+     *
+     * @param list<array{channel: string, event: string, data: array<string, mixed>, socket: string|null}> $batch Normalized items
+     * @return void
+     */
+    protected function sendBulkToRedis(array $batch): void
+    {
+        $args = [];
+
+        foreach ($batch as $item) {
+            $channels = $this->formatChannels([$item['channel']]);
+            $channelName = $channels[0] ?? $item['channel'];
+            $payload = $item['data'];
+            $socket = $item['socket'];
+
+            $this->logBroadcast(
+                [$channelName],
+                $item['event'],
+                $socket !== null ? $payload + ['socket' => $socket] : $payload,
+            );
+
+            $message = json_encode([
+                'event' => $item['event'],
+                'data' => $this->formatPayload($payload),
+                'socket' => $socket,
+            ]);
+
+            if ($message === false) {
+                throw new BroadcastingException('Failed to encode bulk message to JSON', 500);
+            }
+
+            $args[] = $channelName;
+            $args[] = $message;
+        }
+
+        try {
+            $this->getRedisConnection()->eval(
+                $this->getBulkBroadcastScript(),
+                $args,
+                0,
+            );
+        } catch (Exception $exception) {
+            throw new BroadcastingException(
+                'Redis bulk broadcast failed: ' . $exception->getMessage(),
+                500,
+                $exception,
+            );
+        }
+    }
+
+    /**
+     * Lua script for personalized bulk publish.
+     *
+     * ARGV odd indices = channels, even indices = messages.
+     *
+     * @return string
+     */
+    protected function getBulkBroadcastScript(): string
+    {
+        return <<<'LUA'
+for i = 1, #ARGV, 2 do
+    redis.call('publish', ARGV[i], ARGV[i + 1])
+end
+LUA;
+    }
+
+    /**
      * Broadcast to multiple channels using Lua script for efficiency.
      *
      * @param array<string> $channels Channel names

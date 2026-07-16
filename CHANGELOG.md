@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Broadcasting::bulk()` / `queueBulk()` for personalized multi-channel fan-out; `BulkBroadcastJob` for chunked queue processing
+- `BroadcasterInterface::bulkBroadcast()` with shared normalize helpers on `BaseBroadcaster`; `PusherBroadcaster` uses `triggerBatch` (default chunk 100, configurable via `bulk.max_batch_size`)
+- `RedisBroadcaster::bulkBroadcast()` publishes personalized channel/message pairs in one Lua `eval` per chunk
+- `LogBroadcaster::bulkBroadcast()` writes a single summary log line for the batch
+- TestSuite helpers for bulk queue assertions (`assertBulkBroadcastQueued*`, `getQueuedBulkBroadcastJobs` / `Items`)
 - Optional JSONP responses for Pusher channel auth when `jsonp` is enabled on the connection (`allowJsonp`); auth controller passes through `Response` bodies
 - `UniqueBroadcastJob` with Cake Queue uniqueness (`$shouldBeUnique`); fluent `PendingBroadcast::unique()` and optional event `broadcastUnique()` / `broadcastUniqueKey()`
 - `uniqueCache` documentation on the broadcasting queue connection config

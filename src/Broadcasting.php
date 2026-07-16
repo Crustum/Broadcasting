@@ -6,6 +6,7 @@ namespace Crustum\Broadcasting;
 use Cake\Core\Configure;
 use Cake\Core\StaticConfigTrait;
 use Cake\Log\Log;
+use Crustum\Broadcasting\Broadcaster\BaseBroadcaster;
 use Crustum\Broadcasting\Broadcaster\BroadcasterInterface;
 use Crustum\Broadcasting\Broadcaster\NullBroadcaster;
 use Crustum\Broadcasting\Channel\Channel;
@@ -17,6 +18,7 @@ use Crustum\Broadcasting\Event\QueueableInterface;
 use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidBroadcasterException;
 use Crustum\Broadcasting\Job\BroadcastJob;
+use Crustum\Broadcasting\Job\BulkBroadcastJob;
 use Crustum\Broadcasting\Job\UniqueBroadcastJob;
 use Crustum\Broadcasting\Queue\CakeQueueAdapter;
 use Crustum\Broadcasting\Queue\QueueAdapterInterface;
@@ -425,6 +427,87 @@ class Broadcasting
         }
 
         $pending->send();
+    }
+
+    /**
+     * Broadcast multiple personalized messages.
+     *
+     * Accepts broadcastable event objects and/or flat specs
+     * `{channel, event, data, socket?}`.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat specs
+     * `{channel, event, data, socket?}`.
+     * @param string $connection Connection name
+     * @param int $chunkSize Max items per driver batch request
+     * @return void
+     */
+    public static function bulk(array $broadcasts, string $connection = 'default', int $chunkSize = 100): void
+    {
+        if ($broadcasts === []) {
+            return;
+        }
+
+        static::get($connection)->bulkBroadcast($broadcasts, $chunkSize);
+    }
+
+    /**
+     * Queue personalized broadcasts as chunked `BulkBroadcastJob`s.
+     *
+     * Event objects are normalized to flat arrays before enqueue so workers
+     * do not need to unserialize application event classes.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat specs
+     * `{channel, event, data, socket?}`.
+     * @param string $connection Connection name
+     * @param array<string, mixed> $options Queue options; `chunkSize` controls job size
+     * @return void
+     */
+    public static function queueBulk(array $broadcasts, string $connection = 'default', array $options = []): void
+    {
+        if ($broadcasts === []) {
+            return;
+        }
+
+        $chunkSize = (int)($options['chunkSize'] ?? 100);
+        unset($options['chunkSize']);
+
+        if ($chunkSize < 1) {
+            $chunkSize = 100;
+        }
+
+        $broadcaster = static::get($connection);
+        $normalized = $broadcaster instanceof BaseBroadcaster
+            ? $broadcaster->normalizeBulkBroadcasts($broadcasts)
+            : [];
+
+        if ($normalized === []) {
+            return;
+        }
+
+        foreach (array_chunk($normalized, $chunkSize) as $chunk) {
+            $jobData = [
+                'broadcasts' => $chunk,
+                'connection' => $connection,
+                'chunkSize' => $chunkSize,
+            ];
+
+            try {
+                static::getQueueAdapter()->push(BulkBroadcastJob::class, $jobData, $options);
+
+                Log::info(__(
+                    'Bulk broadcast queued successfully ({0} items) with config {1}',
+                    count($chunk),
+                    $connection,
+                ));
+            } catch (Exception $exception) {
+                Log::error(__(
+                    'Failed to queue bulk broadcast ({0} items) with config {1}: {2}',
+                    count($chunk),
+                    $connection,
+                    $exception->getMessage(),
+                ));
+            }
+        }
     }
 
     /**

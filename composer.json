@@ -29,7 +29,8 @@
         "react/http": "^1.7",
         "cakephp/cakephp-codesniffer": "^5.0",
         "rector/rector": "^2.5",
-        "cakephp/bake": "^3.0"
+        "cakephp/bake": "^3.0",
+        "crustum/essentia": "1.0"
     },
     "autoload": {
         "psr-4": {
@@ -62,6 +63,7 @@
         "test:coverage": "phpunit --coverage-html coverage",
         "stan": "tools/phpstan analyse src/ tests/",
         "psalm": "tools/psalm --show-info=false",
+        "rector": "rector",
         "stan-tests": "tools/phpstan analyze -c tests/phpstan.neon",
         "stan-baseline": "tools/phpstan --generate-baseline"
     },
