@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Pusher auth JSONP wrapping when the client sends a `callback` query parameter and JSONP is allowed
 
+### Documentation
+
+- Document manual `/broadcasting/auth` route registration when plugin routes are not loaded
+- Document Echo React/Vue `useConnectionStatus` hook and status values
+- Document Echo `stopListeningForNotification` for notification channels
+
 ## [1.1.0]
 
 ### Added
