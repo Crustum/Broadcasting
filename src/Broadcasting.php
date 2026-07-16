@@ -158,23 +158,23 @@ class Broadcasting
 
         try {
             $registry->load($name, $config);
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             if (!array_key_exists('fallback', $config)) {
                 $registry->set($name, new NullBroadcaster());
-                trigger_error($e->getMessage(), E_USER_WARNING);
+                trigger_error($exception->getMessage(), E_USER_WARNING);
 
                 return;
             }
 
             if ($config['fallback'] === false) {
-                throw $e;
+                throw $exception;
             }
 
             if ($config['fallback'] === $name) {
                 throw new InvalidBroadcasterException(sprintf(
                     '`%s` broadcasting configuration cannot fallback to itself.',
                     $name,
-                ), 0, $e);
+                ), 0, $exception);
             }
 
             $fallbackBroadcaster = clone static::get($config['fallback']);
@@ -227,7 +227,7 @@ class Broadcasting
         $pending = new PendingBroadcast($channels);
 
         $eventName = $event->broadcastEvent();
-        if ($eventName) {
+        if ($eventName !== '' && $eventName !== '0') {
             $pending->event($eventName);
         }
 
@@ -240,12 +240,10 @@ class Broadcasting
             $pending->setSocket($event->broadcastSocket());
         }
 
-        if ($event instanceof ConditionalInterface) {
-            if (!$event->broadcastWhen()) {
-                $pending->skip();
+        if ($event instanceof ConditionalInterface && !$event->broadcastWhen()) {
+            $pending->skip();
 
-                return $pending;
-            }
+            return $pending;
         }
 
         if ($event instanceof QueueableInterface) {
@@ -292,14 +290,14 @@ class Broadcasting
 
         try {
             static::_buildBroadcaster($connection);
-        } catch (InvalidBroadcasterException $e) {
-            // @phpstan-ignore-next-line
-            if (!$registry->has($connection) && ($connection == 'default')) {
+        } catch (InvalidBroadcasterException $invalidBroadcasterException) {
+            if ($connection === 'default') {
                 $connection = Configure::read('Broadcasting.default');
 
                 return static::get($connection);
             }
-            throw $e;
+
+            throw $invalidBroadcasterException;
         }
 
         return $registry->get($connection);
@@ -318,7 +316,7 @@ class Broadcasting
     {
         try {
             $broadcaster = static::get($connection);
-        } catch (Exception $e) {
+        } catch (Exception) {
             return;
         }
 
@@ -424,13 +422,13 @@ class Broadcasting
                 implode(', ', $channelArray),
                 $config,
             ));
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             Log::error(__(
                 'Failed to queue broadcast event {0} for channels {1} with config {2}: {3}',
                 $event,
                 implode(', ', $channelArray),
                 $config,
-                $e->getMessage(),
+                $exception->getMessage(),
             ));
         }
     }
@@ -495,12 +493,14 @@ class Broadcasting
             if (!is_array($key)) {
                 throw new LogicException('If config is null, key must be an array.');
             }
+
             foreach ($key as $name => $settings) {
                 static::setConfig((string)$name, $settings);
             }
 
             return;
         }
+
         if (!is_string($key)) {
             throw new LogicException('If config is not null, key must be a string.');
         }

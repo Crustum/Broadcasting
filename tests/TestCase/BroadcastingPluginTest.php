@@ -30,6 +30,7 @@ class BroadcastingPluginTest extends TestCase
         foreach (Broadcasting::configured() as $configName) {
             Broadcasting::drop((string)$configName);
         }
+
         Broadcasting::getRegistry()->reset();
         Configure::delete('Broadcasting');
     }
@@ -39,7 +40,7 @@ class BroadcastingPluginTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -54,7 +55,7 @@ class BroadcastingPluginTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->clearBroadcastingConfigurations();
         Log::drop('broadcasting');
@@ -263,6 +264,7 @@ class BroadcastingPluginTest extends TestCase
                 $hasBootstrap = true;
                 break;
             }
+
             if (isset($item['tag']) && $item['tag'] === 'bootstrap') {
                 $hasBootstrap = true;
                 break;

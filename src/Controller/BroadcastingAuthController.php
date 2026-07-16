@@ -60,20 +60,20 @@ class BroadcastingAuthController extends Controller
      */
     public function auth(): Response
     {
-        if (!$this->request->is('post')) {
+        if (!$this->getRequest()->is('post')) {
             return $this->errorResponse('Method not allowed. Only POST is supported.', 405);
         }
 
         try {
             $broadcaster = Broadcasting::get();
-            $authData = $broadcaster->auth($this->request);
+            $authData = $broadcaster->auth($this->getRequest());
 
             $jsonData = json_encode($authData);
             if ($jsonData === false) {
                 return $this->errorResponse('Invalid JSON data', 500);
             }
 
-            return $this->response
+            return $this->getResponse()
                 ->withType('application/json')
                 ->withStringBody($jsonData);
         } catch (InvalidChannelException $e) {
@@ -100,13 +100,13 @@ class BroadcastingAuthController extends Controller
      */
     public function userAuth(): Response
     {
-        if (!$this->request->is('post')) {
+        if (!$this->getRequest()->is('post')) {
             return $this->errorResponse('Method not allowed. Only POST is supported.', 405);
         }
 
         try {
             $broadcaster = Broadcasting::get();
-            $userData = $broadcaster->resolveAuthenticatedUser($this->request);
+            $userData = $broadcaster->resolveAuthenticatedUser($this->getRequest());
 
             if ($userData === null) {
                 return $this->errorResponse('User not authenticated', 403);
@@ -117,12 +117,12 @@ class BroadcastingAuthController extends Controller
                 return $this->errorResponse('Invalid JSON data', 500);
             }
 
-            return $this->response
+            return $this->getResponse()
                 ->withType('application/json')
                 ->withStringBody($jsonData);
         } catch (BroadcastingException $e) {
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 400);
-        } catch (Exception $e) {
+        } catch (Exception) {
             return $this->errorResponse('User authentication failed', 500);
         }
     }
@@ -138,13 +138,13 @@ class BroadcastingAuthController extends Controller
     {
         $jsonData = json_encode(['error' => $message]);
         if ($jsonData === false) {
-            return $this->response
+            return $this->getResponse()
                 ->withStatus($code)
                 ->withType('text/plain')
                 ->withStringBody('Error: ' . $message);
         }
 
-        return $this->response
+        return $this->getResponse()
             ->withStatus($code)
             ->withType('application/json')
             ->withStringBody($jsonData);

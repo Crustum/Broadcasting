@@ -102,9 +102,8 @@ class PendingBroadcast
      * Set the event name.
      *
      * @param string $name Event name
-     * @return $this
      */
-    public function event(string $name)
+    public function event(string $name): static
     {
         $this->eventName = $name;
 
@@ -115,9 +114,8 @@ class PendingBroadcast
      * Set the payload data.
      *
      * @param array<string, mixed> $data Payload data
-     * @return $this
      */
-    public function data(array $data)
+    public function data(array $data): static
     {
         $this->data = $data;
 
@@ -128,9 +126,8 @@ class PendingBroadcast
      * Set the broadcasting connection.
      *
      * @param string $name Connection name
-     * @return $this
      */
-    public function connection(string $name)
+    public function connection(string $name): static
     {
         $this->connectionName = $name;
 
@@ -141,9 +138,8 @@ class PendingBroadcast
      * Set the delay before processing (in seconds).
      *
      * @param int $delay Delay in seconds
-     * @return $this
      */
-    public function delay(int $delay)
+    public function delay(int $delay): static
     {
         $this->delay = $delay;
 
@@ -154,9 +150,8 @@ class PendingBroadcast
      * Set the message expiration time (in seconds).
      *
      * @param int $expires Expiration time in seconds
-     * @return $this
      */
-    public function expires(int $expires)
+    public function expires(int $expires): static
     {
         $this->expires = $expires;
 
@@ -167,9 +162,8 @@ class PendingBroadcast
      * Set the message priority.
      *
      * @param string $priority Priority constant from \Enqueue\Client\MessagePriority
-     * @return $this
      */
-    public function priority(string $priority)
+    public function priority(string $priority): static
     {
         $this->priority = $priority;
 
@@ -188,10 +182,8 @@ class PendingBroadcast
 
     /**
      * Mark the broadcast to be skipped.
-     *
-     * @return $this
      */
-    public function skip()
+    public function skip(): static
     {
         $this->skipped = true;
         $this->executed = true;
@@ -262,12 +254,15 @@ class PendingBroadcast
         if ($this->queueName !== null) {
             $options['queue'] = $this->queueName;
         }
+
         if ($this->delay !== null) {
             $options['delay'] = $this->delay;
         }
+
         if ($this->expires !== null) {
             $options['expires'] = $this->expires;
         }
+
         if ($this->priority !== null) {
             $options['priority'] = $this->priority;
         }
@@ -283,8 +278,6 @@ class PendingBroadcast
 
     /**
      * Auto-send in destructor if not explicitly executed.
-     *
-     * @return void
      */
     public function __destruct()
     {
@@ -309,9 +302,7 @@ class PendingBroadcast
             return [new Channel($channels)];
         }
 
-        return array_map(function ($channel) {
-            return $channel instanceof Channel ? $channel : new Channel($channel);
-        }, $channels);
+        return array_map(fn($channel): Channel => $channel instanceof Channel ? $channel : new Channel($channel), $channels);
     }
 
     /**
@@ -321,8 +312,6 @@ class PendingBroadcast
      */
     protected function getChannelNames(): array
     {
-        return array_map(function ($channel) {
-            return $channel->getName();
-        }, $this->channels);
+        return array_map(fn($channel) => $channel->getName(), $this->channels);
     }
 }

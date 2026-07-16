@@ -189,9 +189,7 @@ class NullBroadcasterTest extends TestCase
     {
         $broadcaster = new NullBroadcaster();
 
-        $broadcaster->setChannelCallbacks(['test' => function () {
-            return true;
-        }]);
+        $broadcaster->setChannelCallbacks(['test' => fn(): true => true]);
 
         $this->assertInstanceOf(NullBroadcaster::class, $broadcaster);
     }

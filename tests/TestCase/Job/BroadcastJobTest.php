@@ -115,9 +115,7 @@ class BroadcastJobTest extends TestCase
         $originalMessage->method('getMessageId')->willReturn('test-message-id');
 
         $message = $this->createStub(Message::class);
-        $message->method('getArgument')->willReturnCallback(function ($key, $default = null) use ($data) {
-            return $data[$key] ?? $default;
-        });
+        $message->method('getArgument')->willReturnCallback(fn($key, $default = null) => $data[$key] ?? $default);
         $message->method('getOriginalMessage')->willReturn($originalMessage);
 
         return $message;

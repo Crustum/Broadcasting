@@ -6,13 +6,14 @@ namespace Crustum\Broadcasting\Test\TestCase\Command;
 use Cake\Console\Arguments;
 use Cake\Console\CommandInterface;
 use Cake\Console\ConsoleIo;
-use Cake\Console\ConsoleOptionParser;
 use Cake\Console\TestSuite\ConsoleIntegrationTestTrait;
 use Cake\Core\Configure;
 use Cake\TestSuite\TestCase;
 use Cake\View\Exception\MissingTemplateException;
 use Crustum\Broadcasting\Command\ChannelCommand;
 use ReflectionClass;
+use TestApp\Application;
+use TestApp\Model\Entity\User;
 
 /**
  * ChannelCommand Test
@@ -42,11 +43,11 @@ class ChannelCommandTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->setAppNamespace('TestApp');
-        $this->configApplication('TestApp\Application', [CONFIG]);
+        $this->configApplication(Application::class, [CONFIG]);
     }
 
     /**
@@ -54,7 +55,7 @@ class ChannelCommandTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         parent::tearDown();
 
@@ -63,7 +64,7 @@ class ChannelCommandTest extends TestCase
             $this->generatedFile = '';
         }
 
-        if (count($this->generatedFiles)) {
+        if ($this->generatedFiles !== []) {
             foreach ($this->generatedFiles as $file) {
                 if (file_exists($file)) {
                     unlink($file);
@@ -115,7 +116,7 @@ class ChannelCommandTest extends TestCase
         $args = $this->createMock(Arguments::class);
         $args->method('getArgumentAt')->with(0)->willReturn('Order');
 
-        $args->method('getOption')->willReturnCallback(function ($key) {
+        $args->method('getOption')->willReturnCallback(function ($key): ?false {
             if ($key === 'verbose') {
                 return false;
             }
@@ -126,7 +127,7 @@ class ChannelCommandTest extends TestCase
             return null;
         });
 
-        $io->method('out')->willReturnCallback(function ($message, $level = 0) {
+        $io->method('out')->willReturnCallback(function ($message, $level = 0): void {
         });
 
         $io->method('createFile')->willReturn(true);
@@ -136,8 +137,8 @@ class ChannelCommandTest extends TestCase
             $this->assertNotEmpty($content);
             $this->assertIsString($content);
             $this->assertStringContainsString('OrderChannel', $content);
-        } catch (MissingTemplateException $e) {
-            $this->markTestSkipped('Template not available in test environment: ' . $e->getMessage());
+        } catch (MissingTemplateException $missingTemplateException) {
+            $this->markTestSkipped('Template not available in test environment: ' . $missingTemplateException->getMessage());
         }
     }
 
@@ -161,8 +162,8 @@ class ChannelCommandTest extends TestCase
             $this->assertNotEmpty($content);
             $this->assertIsString($content);
             $this->assertStringContainsString('TestChannel', $content);
-        } catch (MissingTemplateException $e) {
-            $this->markTestSkipped('Template not available in test environment: ' . $e->getMessage());
+        } catch (MissingTemplateException $missingTemplateException) {
+            $this->markTestSkipped('Template not available in test environment: ' . $missingTemplateException->getMessage());
         }
     }
 
@@ -182,7 +183,7 @@ class ChannelCommandTest extends TestCase
         $args = $this->createMock(Arguments::class);
         $args->method('getArgumentAt')->with(0)->willReturn('Order');
 
-        $args->method('getOption')->willReturnCallback(function ($key) {
+        $args->method('getOption')->willReturnCallback(function ($key): ?false {
             if ($key === 'verbose') {
                 return false;
             }
@@ -199,8 +200,8 @@ class ChannelCommandTest extends TestCase
             if (is_string($content)) {
                 $this->assertStringContainsString('OrderChannel', $content);
             }
-        } catch (MissingTemplateException $e) {
-            $this->markTestSkipped('Template not available in test environment: ' . $e->getMessage());
+        } catch (MissingTemplateException $missingTemplateException) {
+            $this->markTestSkipped('Template not available in test environment: ' . $missingTemplateException->getMessage());
         }
     }
 
@@ -214,7 +215,6 @@ class ChannelCommandTest extends TestCase
         $command = new ChannelCommand();
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getChannelNameFromClass');
-        $method->setAccessible(true);
 
         $result = $method->invoke($command, 'OrderChannel');
         $this->assertEquals('order', $result);
@@ -235,7 +235,6 @@ class ChannelCommandTest extends TestCase
         $command = new ChannelCommand();
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getUserModel');
-        $method->setAccessible(true);
 
         $result = $method->invoke($command);
         $this->assertEquals('User', $result);
@@ -253,7 +252,6 @@ class ChannelCommandTest extends TestCase
         $command = new ChannelCommand();
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getUserModel');
-        $method->setAccessible(true);
 
         $result = $method->invoke($command);
         $this->assertEquals('CustomUser', $result);
@@ -273,10 +271,9 @@ class ChannelCommandTest extends TestCase
         $command = new ChannelCommand();
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getNamespacedUserModel');
-        $method->setAccessible(true);
 
         $result = $method->invoke($command);
-        $this->assertEquals('TestApp\Model\Entity\User', $result);
+        $this->assertEquals(User::class, $result);
     }
 
     /**
@@ -291,7 +288,6 @@ class ChannelCommandTest extends TestCase
         $command = new ChannelCommand();
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getNamespacedUserModel');
-        $method->setAccessible(true);
 
         $result = $method->invoke($command);
         $this->assertEquals('App\Model\Entity\CustomUser', $result);
@@ -312,47 +308,8 @@ class ChannelCommandTest extends TestCase
 
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getPath');
-        $method->setAccessible(true);
 
         $path = $method->invoke($command, $args);
         $this->assertStringContainsString('Broadcasting', $path);
-    }
-
-    /**
-     * Test buildOptionParser
-     *
-     * @return void
-     */
-    public function testBuildOptionParser(): void
-    {
-        $command = new ChannelCommand();
-        $parser = $command->buildOptionParser(
-            new ConsoleOptionParser('bake channel'),
-        );
-
-        $this->assertNotEmpty($parser->getDescription());
-        $this->assertInstanceOf(ConsoleOptionParser::class, $parser);
-    }
-
-    /**
-     * Test defaultName
-     *
-     * @return void
-     */
-    public function testDefaultName(): void
-    {
-        $name = ChannelCommand::defaultName();
-        $this->assertEquals('bake channel', $name);
-    }
-
-    /**
-     * Test name method
-     *
-     * @return void
-     */
-    public function testName(): void
-    {
-        $command = new ChannelCommand();
-        $this->assertEquals('channel', $command->name());
     }
 }

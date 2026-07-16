@@ -38,6 +38,7 @@ class CakeQueueAdapter implements QueueAdapterInterface
      */
     public function getUniqueId(string $eventName, string $type, array $data = []): string
     {
+        // @phpstan-ignore-next-line
         return QueueManager::getUniqueId($eventName, $type, $data);
     }
 }

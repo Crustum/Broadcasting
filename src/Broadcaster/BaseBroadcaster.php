@@ -74,7 +74,7 @@ abstract class BaseBroadcaster implements BroadcasterInterface
      */
     public function resolveAuthenticatedUser(ServerRequestInterface $request): ?array
     {
-        if ($this->authenticatedUserCallback) {
+        if ($this->authenticatedUserCallback instanceof Closure) {
             return ($this->authenticatedUserCallback)($request);
         }
 
@@ -266,11 +266,10 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
         try {
             $table = $this->getTableLocator()->get($tableName);
-            $entity = $table->get($value);
 
-            return $entity;
-        } catch (Exception $e) {
-            throw new Exception("Failed to resolve {$key} with value {$value}: " . $e->getMessage());
+            return $table->get($value);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to resolve {$key} with value {$value}: " . $exception->getMessage(), $exception->getCode(), $exception);
         }
     }
 
@@ -300,10 +299,11 @@ abstract class BaseBroadcaster implements BroadcasterInterface
             return $callback;
         }
 
-        return function (...$args) use ($callback) {
+        return function (...$args) use ($callback): bool|array {
             if (!class_exists($callback)) {
                 throw new Exception("Class {$callback} not found");
             }
+
             $instance = new $callback();
 
             if (!$instance instanceof ChannelInterface) {
@@ -370,9 +370,7 @@ abstract class BaseBroadcaster implements BroadcasterInterface
      */
     protected function formatChannels(array $channels): array
     {
-        return array_map(function ($channel) {
-            return (string)$channel;
-        }, $channels);
+        return array_map(fn($channel): string => (string)$channel, $channels);
     }
 
     /**
@@ -418,7 +416,7 @@ abstract class BaseBroadcaster implements BroadcasterInterface
     protected function formatPayload(array $payload): array
     {
         return array_merge($payload, [
-            'time_ms' => (int)((float)microtime(true) * 1000.0),
+            'time_ms' => (int)(microtime(true) * 1000.0),
         ]);
     }
 

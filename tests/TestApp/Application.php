@@ -73,8 +73,8 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             'identify' => false,
             'identifier' => [
                 'Authentication.Callback' => [
-                    'callback' => function ($data) {
-                        if (is_array($data) && !empty($data)) {
+                    'callback' => function ($data): ?Identity {
+                        if (is_array($data) && $data !== []) {
                             return new Identity($data);
                         }
 

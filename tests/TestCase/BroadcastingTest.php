@@ -41,6 +41,7 @@ class BroadcastingTest extends TestCase
         foreach (Broadcasting::configured() as $configName) {
             Broadcasting::drop((string)$configName);
         }
+
         Broadcasting::getRegistry()->reset();
         Broadcasting::enable();
     }
@@ -50,7 +51,7 @@ class BroadcastingTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -79,7 +80,7 @@ class BroadcastingTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->clearBroadcastingConfigurations();
         QueueManager::drop('default');
@@ -488,9 +489,7 @@ class BroadcastingTest extends TestCase
      */
     public function testChannel(): void
     {
-        Broadcasting::channel('private-user.{id}', function ($user, $id) {
-            return $user->id === $id;
-        }, [], 'test');
+        Broadcasting::channel('private-user.{id}', fn($user, $id): bool => $user->id === $id, [], 'test');
 
         $broadcaster = Broadcasting::get('test');
         $this->assertInstanceOf(BroadcasterInterface::class, $broadcaster);
@@ -503,9 +502,7 @@ class BroadcastingTest extends TestCase
      */
     public function testChannelWithInvalidConnectionReturnsSilently(): void
     {
-        Broadcasting::channel('private-user.{id}', function () {
-            return true;
-        }, [], 'nonexistent');
+        Broadcasting::channel('private-user.{id}', fn(): true => true, [], 'nonexistent');
 
         $this->expectNotToPerformAssertions();
     }

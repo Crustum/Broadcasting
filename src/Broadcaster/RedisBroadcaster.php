@@ -92,7 +92,7 @@ class RedisBroadcaster extends BaseBroadcaster
     {
         $channels = $this->formatChannels($channels);
 
-        if (empty($channels)) {
+        if ($channels === []) {
             Log::debug('RedisBroadcaster: No channels to broadcast to');
 
             return;
@@ -126,14 +126,14 @@ class RedisBroadcaster extends BaseBroadcaster
         try {
             $this->broadcastToMultipleChannels($channels, $message);
             Log::debug('RedisBroadcaster: Broadcast successful to ' . count($channels) . ' channels');
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             Log::error('Redis broadcast failed', [
                 'channels' => $channels,
                 'event' => $event,
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ]);
 
-            throw new BroadcastingException('Redis broadcast failed: ' . $e->getMessage(), 500, $e);
+            throw new BroadcastingException('Redis broadcast failed: ' . $exception->getMessage(), 500, $exception);
         }
     }
 
@@ -199,7 +199,7 @@ LUA;
      */
     public function supportsChannelType(string $channelType): bool
     {
-        return in_array($channelType, ['public', 'private', 'presence']);
+        return in_array($channelType, ['public', 'private', 'presence'], true);
     }
 
     /**
@@ -277,7 +277,7 @@ LUA;
     protected function formatPayload(array $payload): array
     {
         return array_merge($payload, [
-            'time_ms' => (int)((float)microtime(true) * 1000.0),
+            'time_ms' => (int)(microtime(true) * 1000.0),
         ]);
     }
 

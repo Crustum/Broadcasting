@@ -18,7 +18,7 @@ class BroadcastPayloadContains extends BroadcastConstraintBase
      * @param mixed $other Array with 'event', 'key', and 'value'
      * @return bool
      */
-    public function matches(mixed $other): bool
+    protected function matches(mixed $other): bool
     {
         $event = $other['event'];
         $key = $other['key'];
@@ -26,10 +26,8 @@ class BroadcastPayloadContains extends BroadcastConstraintBase
         $broadcasts = $this->getBroadcasts();
 
         foreach ($broadcasts as $broadcast) {
-            if ($broadcast['event'] === $event) {
-                if (isset($broadcast['payload'][$key]) && $broadcast['payload'][$key] == $value) {
-                    return true;
-                }
+            if ($broadcast['event'] === $event && (isset($broadcast['payload'][$key]) && $broadcast['payload'][$key] == $value)) {
+                return true;
             }
         }
 

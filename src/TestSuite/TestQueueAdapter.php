@@ -93,9 +93,7 @@ class TestQueueAdapter implements QueueAdapterInterface
      */
     public static function getQueuedJobsByClass(string $jobClass): array
     {
-        $filtered = array_filter(static::$queuedJobs, function ($job) use ($jobClass) {
-            return $job['jobClass'] === $jobClass;
-        });
+        $filtered = array_filter(static::$queuedJobs, fn(array $job): bool => $job['jobClass'] === $jobClass);
 
         return array_values($filtered);
     }
@@ -110,9 +108,7 @@ class TestQueueAdapter implements QueueAdapterInterface
     {
         $broadcastJobs = static::getQueuedJobsByClass(BroadcastJob::class);
 
-        $filtered = array_filter($broadcastJobs, function ($job) use ($eventName) {
-            return isset($job['data']['eventName']) && $job['data']['eventName'] === $eventName;
-        });
+        $filtered = array_filter($broadcastJobs, fn(array $job): bool => isset($job['data']['eventName']) && $job['data']['eventName'] === $eventName);
 
         return array_values($filtered);
     }
@@ -127,7 +123,7 @@ class TestQueueAdapter implements QueueAdapterInterface
     {
         $broadcastJobs = static::getQueuedJobsByClass(BroadcastJob::class);
 
-        $filtered = array_filter($broadcastJobs, function ($job) use ($channel) {
+        $filtered = array_filter($broadcastJobs, function (array $job) use ($channel): bool {
             $channels = $job['data']['channels'] ?? [];
             if (is_array($channels)) {
                 return in_array($channel, $channels);

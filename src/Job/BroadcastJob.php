@@ -50,7 +50,7 @@ class BroadcastJob implements JobInterface
             $pending->send();
 
             return InteropProcessor::ACK;
-        } catch (Exception $e) {
+        } catch (Exception) {
             return InteropProcessor::REQUEUE;
         }
     }

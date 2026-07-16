@@ -126,7 +126,7 @@ class BroadcastingBehavior extends Behavior
             throw new LogicException(
                 sprintf(
                     'Table %s must use BroadcastingTrait and implement BroadcastingTraitInterface.',
-                    get_class($this->_table),
+                    $this->_table::class,
                 ),
             );
         }

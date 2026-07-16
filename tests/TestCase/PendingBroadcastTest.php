@@ -33,6 +33,7 @@ class PendingBroadcastTest extends TestCase
         foreach (Broadcasting::configured() as $configName) {
             Broadcasting::drop((string)$configName);
         }
+
         Broadcasting::getRegistry()->reset();
     }
 
@@ -41,7 +42,7 @@ class PendingBroadcastTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -69,7 +70,7 @@ class PendingBroadcastTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->clearBroadcastingConfigurations();
         QueueManager::drop('default');

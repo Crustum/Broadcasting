@@ -8,6 +8,7 @@ use Authentication\IdentityInterface;
 use Cake\Collection\Collection;
 use Cake\Datasource\EntityInterface;
 use Cake\Http\ServerRequest;
+use Closure;
 use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Trait\PusherChannelConventionsTrait;
 use Exception;
@@ -42,13 +43,15 @@ class PusherBroadcaster extends BaseBroadcaster
     {
         parent::__construct($config);
         if (!isset($config['key']) || empty($config['key'])) {
-            throw new BroadcastingException('Pusher configuration \'key\' is required.', 500);
+            throw new BroadcastingException("Pusher configuration 'key' is required.", 500);
         }
+
         if (!isset($config['secret']) || empty($config['secret'])) {
-            throw new BroadcastingException('Pusher configuration \'secret\' is required.', 500);
+            throw new BroadcastingException("Pusher configuration 'secret' is required.", 500);
         }
+
         if (!isset($config['app_id']) || empty($config['app_id'])) {
-            throw new BroadcastingException('Pusher configuration \'app_id\' is required.', 500);
+            throw new BroadcastingException("Pusher configuration 'app_id' is required.", 500);
         }
 
         $this->pusherClient = $this->createPusherClient($config);
@@ -88,10 +91,12 @@ class PusherBroadcaster extends BaseBroadcaster
         if (!$socketId) {
             $missingParams[] = 'socket_id';
         }
+
         if (!$channelName) {
             $missingParams[] = 'channel_name';
         }
-        if (!empty($missingParams)) {
+
+        if ($missingParams !== []) {
             $message = 'Missing required parameters: ' . implode(', ', $missingParams);
             throw new BroadcastingException($message, 400);
         }
@@ -119,7 +124,7 @@ class PusherBroadcaster extends BaseBroadcaster
         }
 
         $user = $this->resolveUserFromRequest($request);
-        if (!$user) {
+        if ($user === null) {
             return null;
         }
 
@@ -128,8 +133,8 @@ class PusherBroadcaster extends BaseBroadcaster
             $response = $this->pusherClient->authenticateUser($socketId, $userData);
 
             return json_decode($response, true);
-        } catch (Exception $e) {
-            throw new BroadcastingException('Failed to authenticate user: ' . $e->getMessage(), 500);
+        } catch (Exception $exception) {
+            throw new BroadcastingException('Failed to authenticate user: ' . $exception->getMessage(), 500, $exception);
         }
     }
 
@@ -145,7 +150,7 @@ class PusherBroadcaster extends BaseBroadcaster
     {
         $channels = $this->formatChannels($channels);
 
-        if (empty($channels)) {
+        if ($channels === []) {
             return;
         }
 
@@ -184,7 +189,7 @@ class PusherBroadcaster extends BaseBroadcaster
      */
     public function supportsChannelType(string $channelType): bool
     {
-        return in_array($channelType, ['public', 'private', 'presence']);
+        return in_array($channelType, ['public', 'private', 'presence'], true);
     }
 
     /**
@@ -218,7 +223,7 @@ class PusherBroadcaster extends BaseBroadcaster
 
         if ($channelName !== null && str_starts_with($channelName, 'presence-')) {
             $user = $this->resolveUserFromRequest($request);
-            if (!$user) {
+            if ($user === null) {
                 throw new BroadcastingException('User not authenticated for presence channel.', 403);
             }
 
@@ -262,7 +267,7 @@ class PusherBroadcaster extends BaseBroadcaster
      */
     protected function resolveUserFromRequest(ServerRequestInterface $request): IdentityInterface|EntityInterface|null
     {
-        if ($this->authenticatedUserCallback) {
+        if ($this->authenticatedUserCallback instanceof Closure) {
             $result = ($this->authenticatedUserCallback)($request);
 
             return $result instanceof IdentityInterface ? $result : null;

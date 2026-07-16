@@ -10,6 +10,7 @@ use Crustum\Broadcasting\Broadcaster\PusherBroadcaster;
 use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidChannelException;
 use Exception;
+use PHPUnit\Framework\MockObject\MockObject;
 use Pusher\Pusher;
 use ReflectionClass;
 use TestApp\Broadcasting\InvalidChannel;
@@ -63,12 +64,11 @@ class PusherBroadcasterTest extends TestCase
      */
     protected function createPusherBroadcasterWithStub(array $config, ?Pusher $pusher = null): PusherBroadcaster
     {
-        $pusher = $pusher ?? $this->createPusherStub();
+        $pusher ??= $this->createPusherStub();
         $broadcaster = new TestablePusherBroadcaster($config);
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $pusher);
 
         return $broadcaster;
@@ -82,9 +82,9 @@ class PusherBroadcasterTest extends TestCase
      * @param \Pusher\Pusher|null $pusher Pusher client stub
      * @return \Crustum\Broadcasting\Broadcaster\PusherBroadcaster&\PHPUnit\Framework\MockObject\MockObject
      */
-    protected function createPusherBroadcasterWithMock(array $config, array $methodsToStub, ?Pusher $pusher = null)
+    protected function createPusherBroadcasterWithMock(array $config, array $methodsToStub, ?Pusher $pusher = null): MockObject
     {
-        $pusher = $pusher ?? $this->createPusherStub();
+        $pusher ??= $this->createPusherStub();
         /** @var list<non-empty-string> $methodsToStub */
         $broadcaster = $this->getMockBuilder(TestablePusherBroadcaster::class)
             ->setConstructorArgs([$config])
@@ -93,7 +93,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $pusher);
 
         return $broadcaster;
@@ -134,7 +133,7 @@ class PusherBroadcasterTest extends TestCase
     public function testConstructorWithMissingConfig(): void
     {
         $this->expectException(BroadcastingException::class);
-        $this->expectExceptionMessage('Pusher configuration \'key\' is required.');
+        $this->expectExceptionMessage("Pusher configuration 'key' is required.");
 
         new PusherBroadcaster(['app_id' => 'test']);
     }
@@ -281,9 +280,7 @@ class PusherBroadcasterTest extends TestCase
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
         // Register the channel first
-        $broadcaster->registerChannel('private-test', function ($user) {
-            return true;
-        });
+        $broadcaster->registerChannel('private-test', fn($user): true => true);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody([
@@ -329,9 +326,7 @@ class PusherBroadcasterTest extends TestCase
             ->method('resolveUserFromRequest')
             ->willReturn($mockEntity);
 
-        $broadcaster->setChannelCallbacks(['presence-test' => function ($user) {
-            return true;
-        }]);
+        $broadcaster->setChannelCallbacks(['presence-test' => fn($user): true => true]);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody([
@@ -362,9 +357,7 @@ class PusherBroadcasterTest extends TestCase
         $pusher = $this->createPusherStub();
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
-        $broadcaster->registerChannel('presence-test', function ($user) {
-            return true;
-        });
+        $broadcaster->registerChannel('presence-test', fn($user): true => true);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody([
@@ -617,13 +610,11 @@ class PusherBroadcasterTest extends TestCase
 
         $mockUser = $this->createStub(EntityInterface::class);
         $mockUser->method('get')
-            ->willReturnCallback(function ($field) {
-                return match ($field) {
-                    'id' => 1,
-                    'name' => 'Test User',
-                    'email' => 'test@example.com',
-                    default => null,
-                };
+            ->willReturnCallback(fn($field): int|string|null => match ($field) {
+                'id' => 1,
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                default => null,
             });
 
         $mockRoom = $this->createStub(EntityInterface::class);

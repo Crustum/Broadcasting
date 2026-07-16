@@ -18,11 +18,11 @@ class NoBroadcastSent extends BroadcastConstraintBase
      * @param mixed $other Not used
      * @return bool
      */
-    public function matches(mixed $other): bool
+    protected function matches(mixed $other): bool
     {
         $broadcasts = $this->getBroadcasts();
 
-        return empty($broadcasts);
+        return $broadcasts === [];
     }
 
     /**

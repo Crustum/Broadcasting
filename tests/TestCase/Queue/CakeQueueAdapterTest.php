@@ -22,7 +22,7 @@ class CakeQueueAdapterTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -36,7 +36,7 @@ class CakeQueueAdapterTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         QueueManager::drop('default');
         parent::tearDown();

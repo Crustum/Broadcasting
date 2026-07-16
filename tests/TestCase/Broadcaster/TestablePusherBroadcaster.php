@@ -39,7 +39,7 @@ class TestablePusherBroadcaster extends PusherBroadcaster
      */
     protected function createPusherClient(array $config): Pusher
     {
-        if ($this->testPusherClient !== null) {
+        if ($this->testPusherClient instanceof Pusher) {
             return $this->testPusherClient;
         }
 

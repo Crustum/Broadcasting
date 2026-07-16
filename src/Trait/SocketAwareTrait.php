@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Crustum\Broadcasting\Trait;
 
+use Cake\Http\ServerRequest;
 use Cake\Routing\Router;
 
 /**
@@ -29,11 +30,12 @@ trait SocketAwareTrait
     public function dontBroadcastToCurrentUser()
     {
         $request = Router::getRequest();
-        if ($request !== null) {
+        if ($request instanceof ServerRequest) {
             $socketId = $request->getHeaderLine('X-Socket-ID');
             if (empty($socketId)) {
                 $socketId = $request->getQuery('socket_id');
             }
+
             $this->socket = $socketId ?: null;
         }
 

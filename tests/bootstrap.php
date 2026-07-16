@@ -21,6 +21,7 @@ $findRoot = function () {
 if (!defined('DS')) {
     define('DS', DIRECTORY_SEPARATOR);
 }
+
 define('ROOT', $findRoot());
 define('APP_DIR', 'TestApp');
 define('WEBROOT_DIR', 'webroot');
