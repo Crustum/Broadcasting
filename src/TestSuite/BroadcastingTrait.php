@@ -432,6 +432,7 @@ trait BroadcastingTrait
                 break;
             }
         }
+
         $this->assertTrue(
             $found,
             $message ?: "Broadcast {$event} was not queued to channel {$channel}",

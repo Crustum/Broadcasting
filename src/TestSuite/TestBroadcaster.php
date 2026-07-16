@@ -139,7 +139,7 @@ class TestBroadcaster extends NullBroadcaster
     {
         return array_values(array_filter(
             static::$broadcasts,
-            fn($b) => in_array($channel, $b['channels']),
+            fn(array $b): bool => in_array($channel, $b['channels']),
         ));
     }
 
@@ -153,7 +153,7 @@ class TestBroadcaster extends NullBroadcaster
     {
         return array_values(array_filter(
             static::$broadcasts,
-            fn($b) => $b['event'] === $event,
+            fn(array $b): bool => $b['event'] === $event,
         ));
     }
 
@@ -167,7 +167,7 @@ class TestBroadcaster extends NullBroadcaster
     {
         return array_values(array_filter(
             static::$broadcasts,
-            fn($b) => $b['connection'] === $connection,
+            fn(array $b): bool => $b['connection'] === $connection,
         ));
     }
 
@@ -181,7 +181,7 @@ class TestBroadcaster extends NullBroadcaster
     {
         return array_values(array_filter(
             static::$broadcasts,
-            fn($b) => $b['socket'] === $socket,
+            fn(array $b): bool => $b['socket'] === $socket,
         ));
     }
 
@@ -196,7 +196,7 @@ class TestBroadcaster extends NullBroadcaster
     {
         return array_values(array_filter(
             static::$broadcasts,
-            fn($b) => in_array($channel, $b['channels']) && $b['event'] === $event,
+            fn(array $b): bool => in_array($channel, $b['channels']) && $b['event'] === $event,
         ));
     }
 }

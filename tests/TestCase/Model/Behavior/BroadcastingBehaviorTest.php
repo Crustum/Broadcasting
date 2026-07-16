@@ -51,6 +51,7 @@ class BroadcastingBehaviorTest extends TestCase
         foreach (Broadcasting::configured() as $configName) {
             Broadcasting::drop((string)$configName);
         }
+
         Broadcasting::getRegistry()->reset();
 
         $reflection = new ReflectionClass(Broadcasting::class);
@@ -63,7 +64,7 @@ class BroadcastingBehaviorTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -88,7 +89,7 @@ class BroadcastingBehaviorTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->clearBroadcastingConfigurations();
         parent::tearDown();

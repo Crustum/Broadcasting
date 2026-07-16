@@ -28,6 +28,7 @@
         "ratchet/pawl": "^0.4",
         "react/http": "^1.7",
         "cakephp/cakephp-codesniffer": "^5.0",
+        "rector/rector": "^2.5",
         "cakephp/bake": "^3.0"
     },
     "autoload": {

@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace Crustum\Broadcasting\Test\TestCase\Broadcaster;
 
 use Cake\Datasource\EntityInterface;
+use Cake\Http\Response;
 use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\PusherBroadcaster;
 use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidChannelException;
 use Exception;
+use PHPUnit\Framework\MockObject\MockObject;
 use Pusher\Pusher;
 use ReflectionClass;
 use TestApp\Broadcasting\InvalidChannel;
@@ -63,12 +65,11 @@ class PusherBroadcasterTest extends TestCase
      */
     protected function createPusherBroadcasterWithStub(array $config, ?Pusher $pusher = null): PusherBroadcaster
     {
-        $pusher = $pusher ?? $this->createPusherStub();
+        $pusher ??= $this->createPusherStub();
         $broadcaster = new TestablePusherBroadcaster($config);
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $pusher);
 
         return $broadcaster;
@@ -82,9 +83,9 @@ class PusherBroadcasterTest extends TestCase
      * @param \Pusher\Pusher|null $pusher Pusher client stub
      * @return \Crustum\Broadcasting\Broadcaster\PusherBroadcaster&\PHPUnit\Framework\MockObject\MockObject
      */
-    protected function createPusherBroadcasterWithMock(array $config, array $methodsToStub, ?Pusher $pusher = null)
+    protected function createPusherBroadcasterWithMock(array $config, array $methodsToStub, ?Pusher $pusher = null): MockObject
     {
-        $pusher = $pusher ?? $this->createPusherStub();
+        $pusher ??= $this->createPusherStub();
         /** @var list<non-empty-string> $methodsToStub */
         $broadcaster = $this->getMockBuilder(TestablePusherBroadcaster::class)
             ->setConstructorArgs([$config])
@@ -93,7 +94,6 @@ class PusherBroadcasterTest extends TestCase
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
-        $pusherClientProperty->setAccessible(true);
         $pusherClientProperty->setValue($broadcaster, $pusher);
 
         return $broadcaster;
@@ -134,7 +134,7 @@ class PusherBroadcasterTest extends TestCase
     public function testConstructorWithMissingConfig(): void
     {
         $this->expectException(BroadcastingException::class);
-        $this->expectExceptionMessage('Pusher configuration \'key\' is required.');
+        $this->expectExceptionMessage("Pusher configuration 'key' is required.");
 
         new PusherBroadcaster(['app_id' => 'test']);
     }
@@ -281,9 +281,7 @@ class PusherBroadcasterTest extends TestCase
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
         // Register the channel first
-        $broadcaster->registerChannel('private-test', function ($user) {
-            return true;
-        });
+        $broadcaster->registerChannel('private-test', fn($user): true => true);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody([
@@ -293,6 +291,7 @@ class PusherBroadcasterTest extends TestCase
 
         $result = $broadcaster->auth($request);
 
+        $this->assertIsArray($result);
         $this->assertArrayHasKey('auth', $result);
         $this->assertEquals('test-key:test-signature', $result['auth']);
     }
@@ -329,9 +328,7 @@ class PusherBroadcasterTest extends TestCase
             ->method('resolveUserFromRequest')
             ->willReturn($mockEntity);
 
-        $broadcaster->setChannelCallbacks(['presence-test' => function ($user) {
-            return true;
-        }]);
+        $broadcaster->setChannelCallbacks(['presence-test' => fn($user): true => true]);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody([
@@ -341,6 +338,7 @@ class PusherBroadcasterTest extends TestCase
 
         $result = $broadcaster->auth($request);
 
+        $this->assertIsArray($result);
         $this->assertArrayHasKey('auth', $result);
         $this->assertEquals('test-key:test-signature', $result['auth']);
         $this->assertArrayHasKey('channel_data', $result);
@@ -362,9 +360,7 @@ class PusherBroadcasterTest extends TestCase
         $pusher = $this->createPusherStub();
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
-        $broadcaster->registerChannel('presence-test', function ($user) {
-            return true;
-        });
+        $broadcaster->registerChannel('presence-test', fn($user): true => true);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody([
@@ -407,6 +403,7 @@ class PusherBroadcasterTest extends TestCase
 
         $result = $broadcaster->validAuthenticationResponse($request, []);
 
+        $this->assertIsArray($result);
         $this->assertArrayHasKey('auth', $result);
         $this->assertEquals('test-key:test-signature', $result['auth']);
     }
@@ -592,6 +589,7 @@ class PusherBroadcasterTest extends TestCase
 
         $result = $broadcaster->auth($request);
 
+        $this->assertIsArray($result);
         $this->assertArrayHasKey('auth', $result);
         $this->assertEquals('test-key:test-signature', $result['auth']);
     }
@@ -617,13 +615,11 @@ class PusherBroadcasterTest extends TestCase
 
         $mockUser = $this->createStub(EntityInterface::class);
         $mockUser->method('get')
-            ->willReturnCallback(function ($field) {
-                return match ($field) {
-                    'id' => 1,
-                    'name' => 'Test User',
-                    'email' => 'test@example.com',
-                    default => null,
-                };
+            ->willReturnCallback(fn($field): int|string|null => match ($field) {
+                'id' => 1,
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                default => null,
             });
 
         $mockRoom = $this->createStub(EntityInterface::class);
@@ -658,6 +654,7 @@ class PusherBroadcasterTest extends TestCase
 
         $result = $broadcaster->auth($request);
 
+        $this->assertIsArray($result);
         $this->assertArrayHasKey('auth', $result);
         $this->assertArrayHasKey('channel_data', $result);
     }
@@ -837,5 +834,270 @@ class PusherBroadcasterTest extends TestCase
         ]);
 
         $broadcaster->auth($request);
+    }
+
+    /**
+     * Test JSONP callback is ignored when jsonp is disabled (default)
+     *
+     * @return void
+     */
+    public function testValidAuthenticationResponseIgnoresCallbackWhenJsonpDisabled(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+            'jsonp' => false,
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('authorizeChannel')
+            ->with('private-test', '123.456')
+            ->willReturn('{"auth":"test-key:test-signature"}');
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+        $this->assertFalse($broadcaster->allowsJsonp());
+
+        $request = new ServerRequest();
+        $request = $request
+            ->withQueryParams(['callback' => 'pusherCallback'])
+            ->withParsedBody([
+                'channel_name' => 'private-test',
+                'socket_id' => '123.456',
+            ]);
+
+        $result = $broadcaster->validAuthenticationResponse($request, []);
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('auth', $result);
+        $this->assertEquals('test-key:test-signature', $result['auth']);
+    }
+
+    /**
+     * Test JSONP is disabled by default when config omits jsonp
+     *
+     * @return void
+     */
+    public function testJsonpDisabledByDefaultWhenConfigOmitsFlag(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('authorizeChannel')
+            ->willReturn('{"auth":"test-key:test-signature"}');
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+        $this->assertFalse($broadcaster->allowsJsonp());
+
+        $request = new ServerRequest();
+        $request = $request
+            ->withQueryParams(['callback' => 'pusherCallback'])
+            ->withParsedBody([
+                'channel_name' => 'private-test',
+                'socket_id' => '123.456',
+            ]);
+
+        $result = $broadcaster->validAuthenticationResponse($request, []);
+
+        $this->assertIsArray($result);
+    }
+
+    /**
+     * Test JSONP response is returned when jsonp is enabled and callback is present
+     *
+     * @return void
+     */
+    public function testValidAuthenticationResponseReturnsJsonpWhenEnabled(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+            'jsonp' => true,
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('authorizeChannel')
+            ->with('private-test', '123.456')
+            ->willReturn('{"auth":"test-key:test-signature"}');
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+        $this->assertTrue($broadcaster->allowsJsonp());
+
+        $request = new ServerRequest();
+        $request = $request
+            ->withQueryParams(['callback' => 'pusherCallback'])
+            ->withParsedBody([
+                'channel_name' => 'private-test',
+                'socket_id' => '123.456',
+            ]);
+
+        $result = $broadcaster->validAuthenticationResponse($request, []);
+
+        $this->assertInstanceOf(Response::class, $result);
+        $this->assertStringContainsString('application/javascript', $result->getType());
+        $this->assertStringContainsString('pusherCallback(', (string)$result->getBody());
+        $this->assertStringContainsString('test-key:test-signature', (string)$result->getBody());
+        $this->assertStringEndsWith(');', (string)$result->getBody());
+    }
+
+    /**
+     * Test JSONP enabled without callback still returns a plain array
+     *
+     * @return void
+     */
+    public function testValidAuthenticationResponseReturnsArrayWhenJsonpEnabledWithoutCallback(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+            'jsonp' => true,
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('authorizeChannel')
+            ->willReturn('{"auth":"test-key:test-signature"}');
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+
+        $request = new ServerRequest();
+        $request = $request->withParsedBody([
+            'channel_name' => 'private-test',
+            'socket_id' => '123.456',
+        ]);
+
+        $result = $broadcaster->validAuthenticationResponse($request, []);
+
+        $this->assertIsArray($result);
+        $this->assertEquals('test-key:test-signature', $result['auth']);
+    }
+
+    /**
+     * Test JSONP callback can be read from the request body
+     *
+     * @return void
+     */
+    public function testValidAuthenticationResponseAcceptsJsonpCallbackFromBody(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+            'jsonp' => true,
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('authorizeChannel')
+            ->willReturn('{"auth":"test-key:test-signature"}');
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+
+        $request = new ServerRequest();
+        $request = $request->withParsedBody([
+            'channel_name' => 'private-test',
+            'socket_id' => '123.456',
+            'callback' => 'bodyCallback',
+        ]);
+
+        $result = $broadcaster->validAuthenticationResponse($request, []);
+
+        $this->assertInstanceOf(Response::class, $result);
+        $this->assertStringContainsString('bodyCallback(', (string)$result->getBody());
+    }
+
+    /**
+     * Test auth() returns a JSONP Response when jsonp is enabled
+     *
+     * @return void
+     */
+    public function testAuthReturnsJsonpResponseWhenEnabled(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+            'jsonp' => true,
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('authorizeChannel')
+            ->with('private-test', '123.456')
+            ->willReturn('{"auth":"test-key:test-signature"}');
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+        $broadcaster->registerChannel('private-test', fn($user): true => true);
+
+        $request = new ServerRequest();
+        $request = $request
+            ->withQueryParams(['callback' => 'authCallback'])
+            ->withParsedBody([
+                'channel_name' => 'private-test',
+                'socket_id' => '123.456',
+            ]);
+
+        $result = $broadcaster->auth($request);
+
+        $this->assertInstanceOf(Response::class, $result);
+        $this->assertStringContainsString('authCallback(', (string)$result->getBody());
+        $this->assertStringContainsString('test-key:test-signature', (string)$result->getBody());
+    }
+
+    /**
+     * Test presence channel auth returns JSONP when enabled
+     *
+     * @return void
+     */
+    public function testPresenceValidAuthenticationResponseReturnsJsonpWhenEnabled(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+            'jsonp' => true,
+        ];
+
+        $pusher = $this->createPusherMock();
+        $pusher->expects($this->once())
+            ->method('authorizePresenceChannel')
+            ->with('presence-test', '123.456', '1', $this->anything())
+            ->willReturn('{"auth":"test-key:presence-signature","channel_data":"{}"}');
+
+        $mockEntity = $this->createStub(EntityInterface::class);
+        $mockEntity->method('get')
+            ->willReturnMap([
+                ['id', 1],
+                ['full_name', 'Test User'],
+                ['username', 'testuser'],
+            ]);
+
+        $broadcaster = $this->createPusherBroadcasterWithMock($config, ['resolveUserFromRequest'], $pusher);
+        $broadcaster->expects($this->atLeastOnce())
+            ->method('resolveUserFromRequest')
+            ->willReturn($mockEntity);
+
+        $request = new ServerRequest();
+        $request = $request
+            ->withQueryParams(['callback' => 'presenceCallback'])
+            ->withParsedBody([
+                'channel_name' => 'presence-test',
+                'socket_id' => '123.456',
+            ]);
+
+        $result = $broadcaster->validAuthenticationResponse($request, ['id' => 1]);
+
+        $this->assertInstanceOf(Response::class, $result);
+        $this->assertStringContainsString('presenceCallback(', (string)$result->getBody());
+        $this->assertStringContainsString('test-key:presence-signature', (string)$result->getBody());
     }
 }

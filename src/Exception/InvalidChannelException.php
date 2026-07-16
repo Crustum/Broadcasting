@@ -23,7 +23,6 @@ class InvalidChannelException extends BroadcastingException
      * Create exception for invalid channel name.
      *
      * @param string $channel Channel name
-     * @return static
      */
     public static function invalidName(string $channel): static
     {
@@ -37,7 +36,6 @@ class InvalidChannelException extends BroadcastingException
      * Create exception for unsupported channel type.
      *
      * @param string $type Channel type
-     * @return static
      */
     public static function unsupportedType(string $type): static
     {
@@ -51,7 +49,6 @@ class InvalidChannelException extends BroadcastingException
      * Create exception for unauthorized channel access.
      *
      * @param string $channel Channel name
-     * @return static
      */
     public static function unauthorized(string $channel): static
     {

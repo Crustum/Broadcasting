@@ -21,10 +21,10 @@ class OrdersController extends Controller
      */
     public function create(): Response
     {
-        $this->request->allowMethod(['post']);
+        $this->getRequest()->allowMethod(['post']);
 
-        $orderId = $this->request->getData('order_id', 123);
-        $total = $this->request->getData('total', 99.99);
+        $orderId = $this->getRequest()->getData('order_id', 123);
+        $total = $this->getRequest()->getData('total', 99.99);
 
         Broadcasting::to('orders')
             ->event('OrderCreated')
@@ -35,7 +35,7 @@ class OrdersController extends Controller
             ])
             ->send();
 
-        return $this->response
+        return $this->getResponse()
             ->withType('application/json')
             ->withStringBody((string)json_encode([
                 'success' => true,
@@ -50,16 +50,16 @@ class OrdersController extends Controller
      */
     public function update(): Response
     {
-        $this->request->allowMethod(['post']);
+        $this->getRequest()->allowMethod(['post']);
 
-        $orderId = $this->request->getData('order_id', 123);
+        $orderId = $this->getRequest()->getData('order_id', 123);
 
         Broadcasting::to(['orders', 'admin'])
             ->event('OrderUpdated')
             ->data(['order_id' => $orderId])
             ->send();
 
-        return $this->response
+        return $this->getResponse()
             ->withType('application/json')
             ->withStringBody((string)json_encode(['success' => true]));
     }
@@ -71,16 +71,16 @@ class OrdersController extends Controller
      */
     public function broadcastWithConnection(): Response
     {
-        $this->request->allowMethod(['post']);
+        $this->getRequest()->allowMethod(['post']);
 
-        $connection = $this->request->getData('connection', 'default');
+        $connection = $this->getRequest()->getData('connection', 'default');
 
         Broadcasting::to('orders')
             ->event('OrderCreated')
             ->connection($connection)
             ->send();
 
-        return $this->response
+        return $this->getResponse()
             ->withType('application/json')
             ->withStringBody((string)json_encode(['success' => true]));
     }

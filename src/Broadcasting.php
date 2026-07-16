@@ -14,13 +14,16 @@ use Crustum\Broadcasting\Channel\PrivateChannel;
 use Crustum\Broadcasting\Event\BroadcastableInterface;
 use Crustum\Broadcasting\Event\ConditionalInterface;
 use Crustum\Broadcasting\Event\QueueableInterface;
+use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidBroadcasterException;
 use Crustum\Broadcasting\Job\BroadcastJob;
+use Crustum\Broadcasting\Job\UniqueBroadcastJob;
 use Crustum\Broadcasting\Queue\CakeQueueAdapter;
 use Crustum\Broadcasting\Queue\QueueAdapterInterface;
 use Crustum\Broadcasting\Registry\BroadcasterRegistry;
 use Exception;
 use LogicException;
+use Throwable;
 
 /**
  * Broadcasting provides a consistent interface to Broadcasting in your application. It allows you
@@ -141,6 +144,7 @@ class Broadcasting
      *
      * @param string $name Name of the config array that needs a broadcaster instance built
      * @throws \Crustum\Broadcasting\Exception\InvalidBroadcasterException When a broadcaster cannot be created.
+     * @throws \Crustum\Broadcasting\Exception\BroadcastingException When driver creation fails and fallback is disabled.
      * @throws \RuntimeException If loading of the broadcaster failed.
      * @return void
      */
@@ -158,23 +162,31 @@ class Broadcasting
 
         try {
             $registry->load($name, $config);
-        } catch (Exception $e) {
+        } catch (Throwable $throwable) {
             if (!array_key_exists('fallback', $config)) {
                 $registry->set($name, new NullBroadcaster());
-                trigger_error($e->getMessage(), E_USER_WARNING);
+                trigger_error($throwable->getMessage(), E_USER_WARNING);
 
                 return;
             }
 
             if ($config['fallback'] === false) {
-                throw $e;
+                throw new BroadcastingException(
+                    sprintf(
+                        'Failed to create broadcaster for connection "%s" with error: %s.',
+                        $name,
+                        $throwable->getMessage(),
+                    ),
+                    0,
+                    $throwable,
+                );
             }
 
             if ($config['fallback'] === $name) {
                 throw new InvalidBroadcasterException(sprintf(
                     '`%s` broadcasting configuration cannot fallback to itself.',
                     $name,
-                ), 0, $e);
+                ), 0, $throwable);
             }
 
             $fallbackBroadcaster = clone static::get($config['fallback']);
@@ -227,7 +239,7 @@ class Broadcasting
         $pending = new PendingBroadcast($channels);
 
         $eventName = $event->broadcastEvent();
-        if ($eventName) {
+        if ($eventName !== '' && $eventName !== '0') {
             $pending->event($eventName);
         }
 
@@ -240,16 +252,21 @@ class Broadcasting
             $pending->setSocket($event->broadcastSocket());
         }
 
-        if ($event instanceof ConditionalInterface) {
-            if (!$event->broadcastWhen()) {
-                $pending->skip();
+        if ($event instanceof ConditionalInterface && !$event->broadcastWhen()) {
+            $pending->skip();
 
-                return $pending;
-            }
+            return $pending;
         }
 
         if ($event instanceof QueueableInterface) {
-            $queueName = $event->broadcastQueue();
+            if (method_exists($event, 'broadcastUnique') && $event->broadcastUnique()) {
+                $uniqueKey = method_exists($event, 'broadcastUniqueKey')
+                    ? $event->broadcastUniqueKey()
+                    : null;
+                $pending->unique(true, is_string($uniqueKey) ? $uniqueKey : null);
+            }
+
+            $queueName = static::resolveBroadcastQueue($event);
 
             $delay = $event->broadcastDelay();
             if ($delay !== null) {
@@ -273,6 +290,23 @@ class Broadcasting
     }
 
     /**
+     * Resolve the queue name for a broadcastable event.
+     *
+     * @param \Crustum\Broadcasting\Event\BroadcastableInterface $event Event object
+     * @return string|null
+     */
+    protected static function resolveBroadcastQueue(BroadcastableInterface $event): ?string
+    {
+        return match (true) {
+            $event instanceof QueueableInterface => $event->broadcastQueue(),
+            method_exists($event, 'broadcastQueue') => $event->broadcastQueue(),
+            property_exists($event, 'broadcastQueue') && $event->broadcastQueue !== null => $event->broadcastQueue,
+            property_exists($event, 'queue') && $event->queue !== null => $event->queue,
+            default => null,
+        };
+    }
+
+    /**
      * Get a BroadcasterInterface object for the named broadcaster connection.
      *
      * @param string $connection The name of the configured broadcaster connection.
@@ -292,14 +326,14 @@ class Broadcasting
 
         try {
             static::_buildBroadcaster($connection);
-        } catch (InvalidBroadcasterException $e) {
-            // @phpstan-ignore-next-line
-            if (!$registry->has($connection) && ($connection == 'default')) {
+        } catch (InvalidBroadcasterException $invalidBroadcasterException) {
+            if ($connection === 'default') {
                 $connection = Configure::read('Broadcasting.default');
 
                 return static::get($connection);
             }
-            throw $e;
+
+            throw $invalidBroadcasterException;
         }
 
         return $registry->get($connection);
@@ -318,7 +352,7 @@ class Broadcasting
     {
         try {
             $broadcaster = static::get($connection);
-        } catch (Exception $e) {
+        } catch (Exception) {
             return;
         }
 
@@ -408,6 +442,10 @@ class Broadcasting
     {
         $channelArray = is_array($channels) ? $channels : [$channels];
 
+        $unique = !empty($options['unique']);
+        $uniqueKey = $options['uniqueKey'] ?? null;
+        unset($options['unique'], $options['uniqueKey']);
+
         $jobData = [
             'eventName' => $event,
             'channels' => $channelArray,
@@ -415,8 +453,14 @@ class Broadcasting
             'config' => $config,
         ];
 
+        if ($unique && is_string($uniqueKey) && $uniqueKey !== '') {
+            $jobData['uniqueKey'] = $uniqueKey;
+        }
+
+        $jobClass = $unique ? UniqueBroadcastJob::class : BroadcastJob::class;
+
         try {
-            static::getQueueAdapter()->push(BroadcastJob::class, $jobData, $options);
+            static::getQueueAdapter()->push($jobClass, $jobData, $options);
 
             Log::info(__(
                 'Broadcast event {0} queued successfully for channels {1} with config {2}',
@@ -424,13 +468,13 @@ class Broadcasting
                 implode(', ', $channelArray),
                 $config,
             ));
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             Log::error(__(
                 'Failed to queue broadcast event {0} for channels {1} with config {2}: {3}',
                 $event,
                 implode(', ', $channelArray),
                 $config,
-                $e->getMessage(),
+                $exception->getMessage(),
             ));
         }
     }
@@ -495,12 +539,14 @@ class Broadcasting
             if (!is_array($key)) {
                 throw new LogicException('If config is null, key must be an array.');
             }
+
             foreach ($key as $name => $settings) {
                 static::setConfig((string)$name, $settings);
             }
 
             return;
         }
+
         if (!is_string($key)) {
             throw new LogicException('If config is not null, key must be a string.');
         }

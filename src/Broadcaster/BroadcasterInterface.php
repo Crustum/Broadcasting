@@ -10,7 +10,6 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Defines the contract for broadcasting implementations.
  * Handles channel authentication and message broadcasting.
- * Follows CakePHP conventions with explicit getter/setter methods.
  *
  * @package Crustum\Broadcasting\Broadcaster
  */
@@ -61,7 +60,6 @@ interface BroadcasterInterface
 
     /**
      * Get the broadcaster name.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return string
      */
@@ -69,7 +67,6 @@ interface BroadcasterInterface
 
     /**
      * Set broadcaster configuration.
-     * Following CakePHP convention for explicit setter methods.
      *
      * @param array<string, mixed> $config Configuration array
      * @return void
@@ -78,7 +75,6 @@ interface BroadcasterInterface
 
     /**
      * Get broadcaster configuration.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return array<string, mixed>
      */

@@ -18,7 +18,7 @@ class BroadcastCount extends BroadcastConstraintBase
      * @param mixed $other Expected count
      * @return bool
      */
-    public function matches(mixed $other): bool
+    protected function matches(mixed $other): bool
     {
         $expectedCount = $other;
         $broadcasts = $this->getBroadcasts();

@@ -41,7 +41,7 @@ use LogicException;
  *
  * Basic usage:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'saved',
  *         'Model.afterDelete' => 'deleted',
@@ -56,7 +56,7 @@ use LogicException;
  *
  * Custom event mapping:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'created',
  *         'Model.afterUpdate' => 'updated',
@@ -68,7 +68,7 @@ use LogicException;
  *
  * Custom channel callback:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'created',
  *     ],
@@ -80,7 +80,7 @@ use LogicException;
  *
  * Custom payload callback:
  * ```
- * $this->addBehavior('Broadcasting.Broadcasting', [
+ * $this->addBehavior('Crustum/Broadcasting.Broadcasting', [
  *     'events' => [
  *         'Model.afterSave' => 'saved',
  *     ],
@@ -126,7 +126,7 @@ class BroadcastingBehavior extends Behavior
             throw new LogicException(
                 sprintf(
                     'Table %s must use BroadcastingTrait and implement BroadcastingTraitInterface.',
-                    get_class($this->_table),
+                    $this->_table::class,
                 ),
             );
         }

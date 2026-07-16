@@ -21,7 +21,6 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Abstract base class providing common broadcasting functionality.
  * Handles channel authentication, user resolution, and parameter binding.
- * Following CakePHP conventions with explicit method names.
  *
  * @package Crustum\Broadcasting\Broadcaster
  */
@@ -69,14 +68,13 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Resolve the authenticated user payload for the incoming connection request.
-     * Following CakePHP convention for explicit resolver methods.
      *
      * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
      * @return array{id: string|int, name?: string, email?: string, roles?: array<string>, permissions?: array<string>}|null User payload or null if not authenticated
      */
     public function resolveAuthenticatedUser(ServerRequestInterface $request): ?array
     {
-        if ($this->authenticatedUserCallback) {
+        if ($this->authenticatedUserCallback instanceof Closure) {
             return ($this->authenticatedUserCallback)($request);
         }
 
@@ -85,7 +83,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Resolve authenticated user for user authentication.
-     * Following CakePHP convention for explicit resolver methods.
      *
      * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
      * @return array{id: string|int, name?: string, email?: string, roles?: array<string>, permissions?: array<string>}|null User authentication data or null if not authenticated
@@ -97,7 +94,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Register the user retrieval callback used to authenticate connections.
-     * Following CakePHP convention for explicit registration methods.
      *
      * @param \Closure $callback User resolution callback
      * @return $this
@@ -127,7 +123,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Get all registered channels.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return array<string, callable|string>
      */
@@ -138,7 +133,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Get options for a specific channel.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @param string $channel Channel name
      * @return array{auth?: callable|string, guards?: array<string>, middleware?: array<string>, prefix?: string, domain?: string}
@@ -156,7 +150,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Set broadcaster configuration.
-     * Following CakePHP convention for explicit setter methods.
      *
      * @param array<string, mixed> $config Configuration array
      * @return void
@@ -168,7 +161,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Get broadcaster configuration.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return array<string, mixed>
      */
@@ -190,7 +182,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Verify that a user can access a channel.
-     * Following CakePHP convention for explicit verification methods.
      *
      * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
      * @param string $channel Channel name
@@ -275,11 +266,10 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
         try {
             $table = $this->getTableLocator()->get($tableName);
-            $entity = $table->get($value);
 
-            return $entity;
-        } catch (Exception $e) {
-            throw new Exception("Failed to resolve {$key} with value {$value}: " . $e->getMessage());
+            return $table->get($value);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to resolve {$key} with value {$value}: " . $exception->getMessage(), $exception->getCode(), $exception);
         }
     }
 
@@ -309,10 +299,11 @@ abstract class BaseBroadcaster implements BroadcasterInterface
             return $callback;
         }
 
-        return function (...$args) use ($callback) {
+        return function (...$args) use ($callback): bool|array {
             if (!class_exists($callback)) {
                 throw new Exception("Class {$callback} not found");
             }
+
             $instance = new $callback();
 
             if (!$instance instanceof ChannelInterface) {
@@ -325,7 +316,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Retrieve user from request.
-     * Following CakePHP convention for explicit retrieval methods.
      *
      * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
      * @param string $channel Channel name
@@ -380,14 +370,11 @@ abstract class BaseBroadcaster implements BroadcasterInterface
      */
     protected function formatChannels(array $channels): array
     {
-        return array_map(function ($channel) {
-            return (string)$channel;
-        }, $channels);
+        return array_map(fn($channel): string => (string)$channel, $channels);
     }
 
     /**
      * Get channel name from request.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
      * @return string|null
@@ -405,7 +392,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Format user data for presence channels.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param \Cake\Datasource\EntityInterface|\ArrayAccess<string, mixed>|array{id: string|int, username?: string, full_name?: string}|array<string, mixed> $user User data
      * @return array{id: string|int, user_info: array{id: string|int, name: string}} Formatted user data
@@ -423,7 +409,6 @@ abstract class BaseBroadcaster implements BroadcasterInterface
 
     /**
      * Format payload for broadcasting.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param array<string, mixed> $payload Payload data
      * @return array<string, mixed> Formatted payload
@@ -431,7 +416,7 @@ abstract class BaseBroadcaster implements BroadcasterInterface
     protected function formatPayload(array $payload): array
     {
         return array_merge($payload, [
-            'time_ms' => (int)((float)microtime(true) * 1000.0),
+            'time_ms' => (int)(microtime(true) * 1000.0),
         ]);
     }
 

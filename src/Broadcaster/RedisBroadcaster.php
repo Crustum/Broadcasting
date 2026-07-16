@@ -15,7 +15,6 @@ use Redis;
  *
  * Broadcasting implementation using Redis pub/sub.
  * Handles channel pattern matching and connection pooling.
- * Following CakePHP conventions with explicit method names.
  *
  * @package Crustum\Broadcasting\Broadcaster
  */
@@ -93,7 +92,7 @@ class RedisBroadcaster extends BaseBroadcaster
     {
         $channels = $this->formatChannels($channels);
 
-        if (empty($channels)) {
+        if ($channels === []) {
             Log::debug('RedisBroadcaster: No channels to broadcast to');
 
             return;
@@ -127,14 +126,14 @@ class RedisBroadcaster extends BaseBroadcaster
         try {
             $this->broadcastToMultipleChannels($channels, $message);
             Log::debug('RedisBroadcaster: Broadcast successful to ' . count($channels) . ' channels');
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             Log::error('Redis broadcast failed', [
                 'channels' => $channels,
                 'event' => $event,
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ]);
 
-            throw new BroadcastingException('Redis broadcast failed: ' . $e->getMessage(), 500, $e);
+            throw new BroadcastingException('Redis broadcast failed: ' . $exception->getMessage(), 500, $exception);
         }
     }
 
@@ -184,7 +183,6 @@ LUA;
 
     /**
      * Get the broadcaster name.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return string
      */
@@ -201,12 +199,11 @@ LUA;
      */
     public function supportsChannelType(string $channelType): bool
     {
-        return in_array($channelType, ['public', 'private', 'presence']);
+        return in_array($channelType, ['public', 'private', 'presence'], true);
     }
 
     /**
      * Get Redis connection.
-     * Following CakePHP convention for explicit getter methods.
      *
      * @return mixed Redis connection
      */
@@ -236,7 +233,6 @@ LUA;
 
     /**
      * Authenticate private channel.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param string $channel Channel name
      * @param mixed $user User data
@@ -253,7 +249,6 @@ LUA;
 
     /**
      * Authenticate presence channel.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param string $channel Channel name
      * @param mixed $user User data
@@ -275,7 +270,6 @@ LUA;
 
     /**
      * Format payload for broadcasting.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param array<string, mixed> $payload Payload data
      * @return array<string, mixed> Formatted payload
@@ -283,13 +277,12 @@ LUA;
     protected function formatPayload(array $payload): array
     {
         return array_merge($payload, [
-            'time_ms' => (int)((float)microtime(true) * 1000.0),
+            'time_ms' => (int)(microtime(true) * 1000.0),
         ]);
     }
 
     /**
      * Publish message to Redis channel.
-     * Following CakePHP convention for explicit action methods.
      *
      * @param string $channel Channel name
      * @param string $message Message to publish
