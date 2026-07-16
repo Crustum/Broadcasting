@@ -18,7 +18,7 @@ class BroadcastSentViaConnection extends BroadcastConstraintBase
      * @param mixed $other Array with 'connection' and 'event' keys
      * @return bool
      */
-    public function matches(mixed $other): bool
+    protected function matches(mixed $other): bool
     {
         $connection = $other['connection'];
         $event = $other['event'];

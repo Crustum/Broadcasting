@@ -22,7 +22,6 @@ class InvalidQueueAdapterException extends BroadcastingException
      * Create exception for unknown broadcaster.
      *
      * @param string $queueAdapter Queue adapter class name
-     * @return static
      */
     public static function unknownQueueAdapter(string $queueAdapter): static
     {

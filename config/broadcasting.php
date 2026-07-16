@@ -98,6 +98,7 @@ return [
                 'key' => env('PUSHER_APP_KEY'),
                 'secret' => env('PUSHER_APP_SECRET'),
                 'app_id' => env('PUSHER_APP_ID'),
+                'jsonp' => env('PUSHER_APP_JSONP', false),
                 'options' => [
                     'cluster' => env('PUSHER_APP_CLUSTER'),
                     'useTLS' => env('PUSHER_APP_USE_TLS', true),
@@ -166,6 +167,15 @@ return [
                 'broadcasting' => [
                     'url' => env('BROADCASTING_QUEUE_URL', 'redis://localhost:6379/1'),
                     'queue' => env('BROADCASTING_QUEUE_NAME', 'broadcasts'),
+                    /*
+                     * Required by Cake\Queue when pushing UniqueBroadcastJob
+                     * (Job::$shouldBeUnique = true). See QueueManager::push().
+                     */
+                    'uniqueCache' => [
+                        'engine' => 'File',
+                        'duration' => '+24 hours',
+                        'prefix' => 'broadcasting_unique_',
+                    ],
                 ],
             ],
         ],

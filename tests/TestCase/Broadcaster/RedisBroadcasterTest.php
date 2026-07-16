@@ -128,13 +128,9 @@ class RedisBroadcasterTest extends TestCase
      */
     public function testAuthWithPrivateChannel(): void
     {
-        $this->redisBroadcaster->registerChannel('private-test', function ($user) {
-            return true;
-        });
+        $this->redisBroadcaster->registerChannel('private-test', fn($user): true => true);
 
-        $this->redisBroadcaster->registerUserResolver(function ($request) {
-            return ['id' => 1, 'name' => 'Test User'];
-        });
+        $this->redisBroadcaster->registerUserResolver(fn($request): array => ['id' => 1, 'name' => 'Test User']);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody(['channel_name' => 'private-test']);
@@ -153,13 +149,9 @@ class RedisBroadcasterTest extends TestCase
      */
     public function testAuthWithPresenceChannel(): void
     {
-        $this->redisBroadcaster->registerChannel('presence-test', function ($user) {
-            return true;
-        });
+        $this->redisBroadcaster->registerChannel('presence-test', fn($user): true => true);
 
-        $this->redisBroadcaster->registerUserResolver(function ($request) {
-            return ['id' => 1, 'name' => 'Test User'];
-        });
+        $this->redisBroadcaster->registerUserResolver(fn($request): array => ['id' => 1, 'name' => 'Test User']);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody(['channel_name' => 'presence-test']);
@@ -179,9 +171,7 @@ class RedisBroadcasterTest extends TestCase
      */
     public function testAuthWithPresenceChannelWithoutUser(): void
     {
-        $this->redisBroadcaster->registerChannel('presence-test', function ($user) {
-            return true;
-        });
+        $this->redisBroadcaster->registerChannel('presence-test', fn($user): true => true);
 
         $request = new ServerRequest();
         $request = $request->withParsedBody(['channel_name' => 'presence-test']);

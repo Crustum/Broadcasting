@@ -21,7 +21,7 @@ class TestBroadcasterTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -45,7 +45,7 @@ class TestBroadcasterTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         TestBroadcaster::clearBroadcasts();
         Broadcasting::getRegistry()->reset();

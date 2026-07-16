@@ -60,11 +60,7 @@ class BroadcasterRegistry extends ObjectRegistry
      */
     protected function _create($class, string $alias, array $config): BroadcasterInterface
     {
-        if (is_object($class)) {
-            $instance = $class;
-        } else {
-            $instance = new $class($config);
-        }
+        $instance = is_object($class) ? $class : new $class($config);
         unset($config['className']);
 
         if (!$instance->getConfig()) {

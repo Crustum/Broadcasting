@@ -11,11 +11,13 @@ use Crustum\Broadcasting\Broadcaster\NullBroadcaster;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\Channel\Channel;
 use Crustum\Broadcasting\Event\BroadcastableInterface;
+use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidBroadcasterException;
 use Crustum\Broadcasting\PendingBroadcast;
 use Crustum\Broadcasting\Queue\QueueAdapterInterface;
 use Crustum\Broadcasting\Registry\BroadcasterRegistry;
 use Crustum\Broadcasting\Test\TestApp\Event\TestBroadcastableClass;
+use Crustum\Broadcasting\Test\TestCase\Broadcaster\FailingLogBroadcaster;
 use Crustum\Broadcasting\TestSuite\BroadcastingTrait;
 use Crustum\Broadcasting\TestSuite\TestBroadcaster;
 use Crustum\Broadcasting\TestSuite\TestQueueAdapter;
@@ -41,6 +43,7 @@ class BroadcastingTest extends TestCase
         foreach (Broadcasting::configured() as $configName) {
             Broadcasting::drop((string)$configName);
         }
+
         Broadcasting::getRegistry()->reset();
         Broadcasting::enable();
     }
@@ -50,7 +53,7 @@ class BroadcastingTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -79,7 +82,7 @@ class BroadcastingTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->clearBroadcastingConfigurations();
         QueueManager::drop('default');
@@ -306,7 +309,7 @@ class BroadcastingTest extends TestCase
     }
 
     /**
-     * Test _buildBroadcaster with fallback false throws exception
+     * Test _buildBroadcaster with fallback false throws wrapped exception
      *
      * @return void
      */
@@ -317,9 +320,41 @@ class BroadcastingTest extends TestCase
             'fallback' => false,
         ]);
 
-        $this->expectException(Exception::class);
+        try {
+            Broadcasting::get('no_fallback');
+            $this->fail('Expected BroadcastingException was not thrown');
+        } catch (BroadcastingException $broadcastingException) {
+            $this->assertStringContainsString(
+                'Failed to create broadcaster for connection "no_fallback"',
+                $broadcastingException->getMessage(),
+            );
+            $this->assertInstanceOf(Exception::class, $broadcastingException->getPrevious());
+        }
+    }
 
-        Broadcasting::get('no_fallback');
+    /**
+     * Test driver creation failure wraps the underlying exception message
+     *
+     * @return void
+     */
+    public function testThrowExceptionWhenDriverCreationFails(): void
+    {
+        Broadcasting::setConfig('log_connection_1', [
+            'className' => FailingLogBroadcaster::class,
+            'fallback' => false,
+        ]);
+
+        try {
+            Broadcasting::get('log_connection_1');
+            $this->fail('Expected BroadcastingException was not thrown');
+        } catch (BroadcastingException $broadcastingException) {
+            $this->assertStringContainsString(
+                'Failed to create broadcaster for connection "log_connection_1"',
+                $broadcastingException->getMessage(),
+            );
+            $this->assertStringContainsString('Logger service not available', $broadcastingException->getMessage());
+            $this->assertInstanceOf(Exception::class, $broadcastingException->getPrevious());
+        }
     }
 
     /**
@@ -488,9 +523,7 @@ class BroadcastingTest extends TestCase
      */
     public function testChannel(): void
     {
-        Broadcasting::channel('private-user.{id}', function ($user, $id) {
-            return $user->id === $id;
-        }, [], 'test');
+        Broadcasting::channel('private-user.{id}', fn($user, $id): bool => $user->id === $id, [], 'test');
 
         $broadcaster = Broadcasting::get('test');
         $this->assertInstanceOf(BroadcasterInterface::class, $broadcaster);
@@ -503,9 +536,7 @@ class BroadcastingTest extends TestCase
      */
     public function testChannelWithInvalidConnectionReturnsSilently(): void
     {
-        Broadcasting::channel('private-user.{id}', function () {
-            return true;
-        }, [], 'nonexistent');
+        Broadcasting::channel('private-user.{id}', fn(): true => true, [], 'nonexistent');
 
         $this->expectNotToPerformAssertions();
     }

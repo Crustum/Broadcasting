@@ -17,19 +17,28 @@ class TestBroadcastableClass implements BroadcastableInterface, ConditionalInter
      */
     protected array $channels = [];
 
-    protected ?string $eventName = null;
+    protected ?string $eventName = 'test.event';
 
     /**
      * Data array
      *
      * @var array<string, mixed>|null
      */
-    protected ?array $data = null;
+    protected ?array $data = [
+        'test-key' => 'test-value',
+        'test-number' => 123,
+    ];
+
     protected ?string $socket = null;
+
     protected bool $shouldBroadcast = true;
+
     protected ?string $queue = 'high';
+
     protected ?int $delay = null;
+
     protected ?int $expires = null;
+
     protected ?string $priority = null;
 
     public function __construct()
@@ -37,11 +46,6 @@ class TestBroadcastableClass implements BroadcastableInterface, ConditionalInter
         $this->channels = [
             new Channel('test-channel-1'),
             new Channel('test-channel-2'),
-        ];
-        $this->eventName = 'test.event';
-        $this->data = [
-            'test-key' => 'test-value',
-            'test-number' => 123,
         ];
     }
 
@@ -74,9 +78,8 @@ class TestBroadcastableClass implements BroadcastableInterface, ConditionalInter
      * Set channels
      *
      * @param \Crustum\Broadcasting\Channel\Channel|array<\Crustum\Broadcasting\Channel\Channel>|string $channels Channels
-     * @return $this
      */
-    public function setChannels(Channel|array|string $channels)
+    public function setChannels(Channel|array|string $channels): static
     {
         if (is_string($channels)) {
             $this->channels = [new Channel($channels)];
@@ -100,9 +103,8 @@ class TestBroadcastableClass implements BroadcastableInterface, ConditionalInter
      * Set data
      *
      * @param array<string, mixed>|null $data Data
-     * @return $this
      */
-    public function setData(?array $data)
+    public function setData(?array $data): static
     {
         $this->data = $data;
 

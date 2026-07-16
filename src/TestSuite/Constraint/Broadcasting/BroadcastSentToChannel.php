@@ -18,7 +18,7 @@ class BroadcastSentToChannel extends BroadcastConstraintBase
      * @param mixed $other Array with 'channel' and 'event' keys
      * @return bool
      */
-    public function matches(mixed $other): bool
+    protected function matches(mixed $other): bool
     {
         $channel = $other['channel'];
         $event = $other['event'];

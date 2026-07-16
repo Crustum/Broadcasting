@@ -47,6 +47,7 @@ class BroadcastingTraitTest extends TestCase
         foreach (Broadcasting::configured() as $configName) {
             Broadcasting::drop((string)$configName);
         }
+
         Broadcasting::getRegistry()->reset();
 
         $reflection = new ReflectionClass(Broadcasting::class);
@@ -59,7 +60,7 @@ class BroadcastingTraitTest extends TestCase
      *
      * @return void
      */
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -84,7 +85,7 @@ class BroadcastingTraitTest extends TestCase
      *
      * @return void
      */
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         TestQueueAdapter::clearQueuedJobs();
         $this->clearBroadcastingConfigurations();
@@ -137,9 +138,7 @@ class BroadcastingTraitTest extends TestCase
      */
     public function testSetBroadcastChannelsWithClosure(): void
     {
-        $this->table->setBroadcastChannels(function ($entity, $event) {
-            return ['user.' . $entity->get('id')];
-        });
+        $this->table->setBroadcastChannels(fn($entity, $event): array => ['user.' . $entity->get('id')]);
 
         $user = new User([
             'id' => 123,
@@ -186,12 +185,10 @@ class BroadcastingTraitTest extends TestCase
      */
     public function testSetBroadcastPayloadWithClosure(): void
     {
-        $this->table->setBroadcastPayload(function ($entity, $event) {
-            return [
-                'id' => $entity->get('id'),
-                'event' => $event,
-            ];
-        });
+        $this->table->setBroadcastPayload(fn($entity, $event): array => [
+            'id' => $entity->get('id'),
+            'event' => $event,
+        ]);
 
         $user = new User([
             'id' => 123,
@@ -290,9 +287,7 @@ class BroadcastingTraitTest extends TestCase
      */
     public function testSetBroadcastEventNameWithClosure(): void
     {
-        $this->table->setBroadcastEventName(function ($entity, $event) {
-            return 'Custom' . ucfirst($event);
-        });
+        $this->table->setBroadcastEventName(fn($entity, $event): string => 'Custom' . ucfirst((string)$event));
 
         $user = new User([
             'id' => 1,

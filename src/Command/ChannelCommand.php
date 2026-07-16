@@ -92,7 +92,7 @@ class ChannelCommand extends BakeCommand
 
         if (is_string($content)) {
             $forceOption = $args->getOption('force');
-            $force = is_bool($forceOption) ? $forceOption : false;
+            $force = is_bool($forceOption) && $forceOption;
             $io->createFile($filename, $content, $force);
         }
 
@@ -150,7 +150,7 @@ class ChannelCommand extends BakeCommand
             $path = $this->_pluginPath($this->plugin) . 'src/' . $this->pathFragment;
         }
         $prefix = $this->getPrefix($args);
-        if ($prefix) {
+        if ($prefix !== '' && $prefix !== '0') {
             $path .= $prefix . DIRECTORY_SEPARATOR;
         }
 
@@ -163,7 +163,7 @@ class ChannelCommand extends BakeCommand
      * @param \Cake\Console\ConsoleOptionParser $parser The parser to configure
      * @return \Cake\Console\ConsoleOptionParser
      */
-    public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
+    protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         $parser = $this->_setCommonOptions($parser);
         $parser->setDescription('Bake Channel authorization class.')
@@ -213,7 +213,7 @@ class ChannelCommand extends BakeCommand
     {
         $userModel = Configure::read('Broadcasting.user_model');
         if ($userModel) {
-            $parts = explode('\\', $userModel);
+            $parts = explode('\\', (string)$userModel);
 
             return end($parts);
         }

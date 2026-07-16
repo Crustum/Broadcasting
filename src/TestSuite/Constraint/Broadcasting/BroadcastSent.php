@@ -18,7 +18,7 @@ class BroadcastSent extends BroadcastConstraintBase
      * @param mixed $other Event name
      * @return bool
      */
-    public function matches(mixed $other): bool
+    protected function matches(mixed $other): bool
     {
         $event = $other;
         $broadcasts = $this->getBroadcasts();

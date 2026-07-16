@@ -23,7 +23,6 @@ class QueueException extends BroadcastingException
      * Create exception for queue adapter not found.
      *
      * @param string $adapter Adapter name
-     * @return static
      */
     public static function adapterNotFound(string $adapter): static
     {
@@ -38,7 +37,6 @@ class QueueException extends BroadcastingException
      *
      * @param string $job Job class name
      * @param string $reason Failure reason
-     * @return static
      */
     public static function pushFailed(string $job, string $reason): static
     {
@@ -52,7 +50,6 @@ class QueueException extends BroadcastingException
      * Create exception for adapter unavailable.
      *
      * @param string $adapter Adapter name
-     * @return static
      */
     public static function adapterUnavailable(string $adapter): static
     {

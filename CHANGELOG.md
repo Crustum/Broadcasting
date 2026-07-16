@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0]
+
+### Added
+
+- Optional JSONP responses for Pusher channel auth when `jsonp` is enabled on the connection (`allowJsonp`); auth controller passes through `Response` bodies
+- `UniqueBroadcastJob` with Cake Queue uniqueness (`$shouldBeUnique`); fluent `PendingBroadcast::unique()` and optional event `broadcastUnique()` / `broadcastUniqueKey()`
+- `uniqueCache` documentation on the broadcasting queue connection config
+- Broadcaster creation errors wrap the original failure with the connection name when `fallback` is `false`
+- Integration tests for facade/send/queue paths and fluent `PendingBroadcast` APIs
+- Unique-job dedupe simulation in `TestQueueAdapter`
+
+### Changed
+
+- Queue name resolution uses a dedicated `resolveBroadcastQueue()` helper
+
+### Fixed
+
+- Pusher auth JSONP wrapping when the client sends a `callback` query parameter and JSONP is allowed
+
+### Documentation
+
+- Document manual `/broadcasting/auth` route registration when plugin routes are not loaded
+- Document Echo React/Vue `useConnectionStatus` hook and status values
+- Document Echo `stopListeningForNotification` for notification channels
+
 ## [1.1.0]
 
 ### Added

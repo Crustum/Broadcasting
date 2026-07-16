@@ -7,6 +7,7 @@ use Cake\Queue\Job\Message;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\Job\BroadcastJob;
+use Crustum\Broadcasting\Test\TestApp\Event\TestUniqueBroadcastableClass;
 use Interop\Queue\Message as QueueMessage;
 use Interop\Queue\Processor as InteropProcessor;
 
@@ -104,6 +105,35 @@ class BroadcastJobTest extends TestCase
     }
 
     /**
+     * Test displayName prefers eventClass for unique job identification
+     *
+     * @return void
+     */
+    public function testDisplayNamePrefersEventClass(): void
+    {
+        $displayName = BroadcastJob::displayName([
+            'eventClass' => TestUniqueBroadcastableClass::class,
+            'eventName' => 'UniqueEvent',
+        ]);
+
+        $this->assertSame(TestUniqueBroadcastableClass::class, $displayName);
+    }
+
+    /**
+     * Test displayName falls back to eventName
+     *
+     * @return void
+     */
+    public function testDisplayNameFallsBackToEventName(): void
+    {
+        $displayName = BroadcastJob::displayName([
+            'eventName' => 'OrderCreated',
+        ]);
+
+        $this->assertSame('OrderCreated', $displayName);
+    }
+
+    /**
      * Create a mock message
      *
      * @param array<string, mixed> $data Message data
@@ -115,9 +145,7 @@ class BroadcastJobTest extends TestCase
         $originalMessage->method('getMessageId')->willReturn('test-message-id');
 
         $message = $this->createStub(Message::class);
-        $message->method('getArgument')->willReturnCallback(function ($key, $default = null) use ($data) {
-            return $data[$key] ?? $default;
-        });
+        $message->method('getArgument')->willReturnCallback(fn($key, $default = null) => $data[$key] ?? $default);
         $message->method('getOriginalMessage')->willReturn($originalMessage);
 
         return $message;

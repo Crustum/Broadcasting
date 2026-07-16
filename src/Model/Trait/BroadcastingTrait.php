@@ -277,12 +277,13 @@ trait BroadcastingTrait
         $converted = [];
         foreach ($channels as $channel) {
             if ($channel instanceof EntityInterface) {
-                $entityClass = get_class($channel);
+                $entityClass = $channel::class;
                 $channelName = str_replace('\\', '.', $entityClass);
                 $id = $channel->get('id');
                 if ($id !== null) {
                     $channelName .= '.' . $id;
                 }
+
                 $converted[] = $channelName;
             } else {
                 $converted[] = $channel;
@@ -314,6 +315,7 @@ trait BroadcastingTrait
         if ($payload !== null) {
             return $payload->toArray();
         }
+
         $data = $entity->toArray();
         $data['event_type'] = $event;
 
@@ -359,7 +361,7 @@ trait BroadcastingTrait
             return $eventNameConfig;
         }
 
-        $entityClass = get_class($entity);
+        $entityClass = $entity::class;
         $className = substr($entityClass, strrpos($entityClass, '\\') + 1);
 
         return $className . ucfirst($event);

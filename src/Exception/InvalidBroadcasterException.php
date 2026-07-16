@@ -23,7 +23,6 @@ class InvalidBroadcasterException extends BroadcastingException
      * Create exception for unknown broadcaster.
      *
      * @param string $broadcaster Broadcaster name
-     * @return static
      */
     public static function unknownBroadcaster(string $broadcaster): static
     {
@@ -38,7 +37,6 @@ class InvalidBroadcasterException extends BroadcastingException
      *
      * @param string $broadcaster Broadcaster name
      * @param string $reason Configuration error reason
-     * @return static
      */
     public static function invalidConfiguration(string $broadcaster, string $reason): static
     {
@@ -52,7 +50,6 @@ class InvalidBroadcasterException extends BroadcastingException
      * Create exception for invalid broadcaster class.
      *
      * @param string $class Class name that is invalid
-     * @return static
      */
     public static function invalidBroadcaster(string $class): static
     {
