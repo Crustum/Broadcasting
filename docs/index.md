@@ -38,6 +38,7 @@
     - [Listening for Model Broadcasts](#listening-for-model-broadcasts)
 - [Client Events](#client-events)
 - [Notifications](#notifications)
+    - [Stop Listening for Notifications](#stop-listening-for-notifications)
 - [Testing](#testing)
     - [Asserting Broadcasts Sent](#asserting-broadcasts-sent)
     - [Asserting Broadcasts to Channels](#asserting-broadcasts-to-channels)
@@ -660,9 +661,33 @@ public function join(EntityInterface $user, ?EntityInterface $model = null): arr
 <a name="channel-authorization-routes"></a>
 ### Channel Authorization Routes
 
-When broadcasting is enabled, CakePHP automatically registers the `/broadcasting/auth` route to handle authorization requests. The `/broadcasting/auth` route is automatically placed within the `web` middleware group.
+Private channels require you to authorize that the currently authenticated user can listen on the channel. When using [Laravel Echo](#laravel-echo), the HTTP request to authorize subscriptions to private channels is made automatically.
 
-The Broadcasting plugin provides a `BroadcastingAuthController` that handles these authorization requests. You may customize this controller by extending it or by defining your own routes.
+When the Broadcasting plugin is loaded with routes enabled, it registers `/broadcasting/auth` (and `/broadcasting/user-auth`) via `BroadcastingPlugin::routes()`. Authorization callbacks themselves are loaded from `config/channels.php` when the plugin boots (`Broadcasting::routes()`).
+
+If plugin routes are not loaded automatically (for example routes are disabled for the plugin, or you need an explicit mount), register them manually in your application's `config/routes.php`:
+
+```php
+use Cake\Routing\RouteBuilder;
+
+/** @var \Cake\Routing\RouteBuilder $routes */
+$routes->scope('/', function (RouteBuilder $builder): void {
+    $builder->connect('/broadcasting/auth', [
+        'plugin' => 'Crustum/Broadcasting',
+        'controller' => 'BroadcastingAuth',
+        'action' => 'auth',
+    ]);
+    $builder->connect('/broadcasting/user-auth', [
+        'plugin' => 'Crustum/Broadcasting',
+        'controller' => 'BroadcastingAuth',
+        'action' => 'userAuth',
+    ]);
+});
+```
+
+Ensure the plugin is loaded so bootstrap still initializes broadcasters and includes `config/channels.php`. You may also call `Broadcasting::routes()` yourself if channel callbacks were not loaded during bootstrap.
+
+The plugin provides a `BroadcastingAuthController` that handles these authorization requests. You may customize this controller by extending it or by defining your own routes.
 
 <a name="broadcasting-events"></a>
 ## Broadcasting Events
@@ -1025,6 +1050,41 @@ useEchoPresence("posts", "PostPublished", (e) => {
 </script>
 ```
 
+<a name="react-vue-connection-status"></a>
+#### Connection Status
+
+You may retrieve the current WebSocket connection status using the `useConnectionStatus` hook, which provides reactive status that automatically updates when the connection state changes:
+
+```js tab=React
+import { useConnectionStatus } from "@laravel/echo-react";
+
+function ConnectionIndicator() {
+    const status = useConnectionStatus();
+
+    return <div>Connection: {status}</div>;
+}
+```
+
+```vue tab=Vue
+<script setup lang="ts">
+import { useConnectionStatus } from "@laravel/echo-vue";
+
+const status = useConnectionStatus();
+</script>
+
+<template>
+    <div>Connection: {{ status }}</div>
+</template>
+```
+
+The possible status values are:
+
+- `connected` — Successfully connected to the WebSocket server.
+- `connecting` — Initial connection attempt in progress.
+- `reconnecting` — Attempting to reconnect after a disconnection.
+- `disconnected` — Not connected and not attempting to reconnect.
+- `failed` — Connection failed and won't retry.
+
 <a name="presence-channels"></a>
 ## Presence Channels
 
@@ -1342,6 +1402,25 @@ Echo.private(`App.Model.Entity.User.${userId}`)
 ```
 
 In this example, all notifications sent to `App\Model\Entity\User` instances via the `broadcast` channel would be received by the callback. A channel authorization callback for the `App.Model.Entity.User.{id}` channel is included in your application's `config/channels.php` file.
+
+<a name="stop-listening-for-notifications"></a>
+### Stop Listening for Notifications
+
+If you would like to stop listening to notifications without [leaving the channel](#leaving-a-channel), you may use the `stopListeningForNotification` method:
+
+```js
+const callback = (notification) => {
+    console.log(notification.type);
+};
+
+Echo.private(`App.Model.Entity.User.${userId}`)
+    .notification(callback);
+
+Echo.private(`App.Model.Entity.User.${userId}`)
+    .stopListeningForNotification(callback);
+```
+
+The callback passed to `stopListeningForNotification` must be the same function reference that was passed to `notification`.
 
 <a name="testing"></a>
 ## Testing
