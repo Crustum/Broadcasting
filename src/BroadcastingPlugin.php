@@ -69,6 +69,11 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
     /**
      * Add routes for the plugin.
      *
+     * Registers `/broadcasting/auth` and `/broadcasting/user-auth`.
+     * When the host application enables `CsrfProtectionMiddleware` globally,
+     * those actions must be excluded via `skipCheckCallback` or by not applying
+     * CSRF to this plugin scope. See docs/index.md#csrf-and-channel-authorization.
+     *
      * If your plugin has many routes and you would like to isolate them into a separate file,
      * you can create `$plugin/config/routes.php` and delete this method.
      *

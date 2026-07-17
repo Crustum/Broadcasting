@@ -20,6 +20,7 @@
 - [Authorizing Channels](#authorizing-channels)
     - [Defining Authorization Callbacks](#defining-authorization-callbacks)
     - [Channel Authorization Routes](#channel-authorization-routes)
+    - [CSRF and Channel Authorization](#csrf-and-channel-authorization)
 - [Broadcasting Events](#broadcasting-events)
     - [Only to Others](#only-to-others)
     - [Customizing the Connection](#customizing-the-connection)
@@ -688,6 +689,65 @@ $routes->scope('/', function (RouteBuilder $builder): void {
 Ensure the plugin is loaded so bootstrap still initializes broadcasters and includes `config/channels.php`. You may also call `Broadcasting::routes()` yourself if channel callbacks were not loaded during bootstrap.
 
 The plugin provides a `BroadcastingAuthController` that handles these authorization requests. You may customize this controller by extending it or by defining your own routes.
+
+<a name="csrf-and-channel-authorization"></a>
+### CSRF and Channel Authorization
+
+Echo (and other Pusher-compatible clients) authorize private and presence channels with an HTTP `POST` to `/broadcasting/auth` (and optionally `/broadcasting/user-auth`). Those requests typically send the session cookie for identity, but **do not** send a CakePHP CSRF form token.
+
+CakePHP does not provide Laravel-style per-route `withoutMiddleware(...)`. CSRF is usually registered once on the application middleware queue (or applied to a broad routing scope). The Broadcasting plugin therefore **does not** disable CSRF itself — the **host application** must exclude the auth endpoints when CSRF is enabled.
+
+> [!IMPORTANT]
+> If `CsrfProtectionMiddleware` (or `SessionCsrfProtectionMiddleware`) runs for `/broadcasting/auth` without a skip, Echo channel authorization will fail with CSRF / 403 errors even when the user is logged in and channel callbacks are correct.
+
+#### Recommended: `skipCheckCallback` on global CSRF
+
+When CSRF is added in `Application::middleware()`, skip the Broadcasting auth actions:
+
+```php
+use Cake\Http\Middleware\CsrfProtectionMiddleware;
+use Cake\Http\MiddlewareQueue;
+
+public function middleware(MiddlewareQueue $middlewareQueue): MiddlewareQueue
+{
+    $csrf = new CsrfProtectionMiddleware();
+    $csrf->skipCheckCallback(function ($request) {
+        if ($request->getParam('plugin') !== 'Crustum/Broadcasting') {
+            return false;
+        }
+
+        return in_array($request->getParam('action'), ['auth', 'userAuth'], true);
+    });
+
+    $middlewareQueue
+        ->add(new \Cake\Routing\Middleware\RoutingMiddleware($this))
+        ->add($csrf);
+
+    return $middlewareQueue;
+}
+```
+
+#### Alternative: scoped CSRF (do not apply to Broadcasting)
+
+Register CSRF and apply it only to scopes that need form protection; leave the Broadcasting plugin routes outside that scope:
+
+```php
+$routes->registerMiddleware('csrf', new CsrfProtectionMiddleware());
+
+$routes->scope('/', function (RouteBuilder $routes): void {
+    $routes->applyMiddleware('csrf');
+});
+```
+
+Do **not** call `$builder->applyMiddleware('csrf')` inside the `Crustum/Broadcasting` plugin route group if you use this pattern.
+
+#### What still protects auth
+
+Skipping CSRF on these endpoints matches the usual realtime stack. Authorization still depends on:
+
+1. Session / Authentication identity on the request
+2. Channel callbacks (or channel classes) in `config/channels.php`
+3. For WebSocket Origin / CORS on the realtime server — configure the server (for example BlazeCast `allowed_origins`), not CSRF middleware
 
 <a name="broadcasting-events"></a>
 ## Broadcasting Events
