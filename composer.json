@@ -61,6 +61,8 @@
         "test:coverage": "phpunit --coverage-html coverage",
         "stan": "tools/phpstan analyse src/ tests/",
         "psalm": "tools/psalm --show-info=false",
+        "rector-check": "vendor/bin/rector process --dry-run",
+        "rector-fix": "vendor/bin/rector process",
         "stan-tests": "tools/phpstan analyze -c tests/phpstan.neon",
         "stan-baseline": "tools/phpstan --generate-baseline"
     },

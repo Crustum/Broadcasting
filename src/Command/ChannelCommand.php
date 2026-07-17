@@ -148,6 +148,7 @@ class ChannelCommand extends BakeCommand
         if ($this->plugin) {
             $path = $this->_pluginPath($this->plugin) . 'src/' . $this->pathFragment;
         }
+
         $prefix = $this->getPrefix($args);
         if ($prefix !== '' && $prefix !== '0') {
             $path .= $prefix . DIRECTORY_SEPARATOR;
