@@ -47,7 +47,14 @@
     "scripts": {
         "check": [
             "@cs-check",
+            "@rector-check",
             "@test",
+            "@analyse"
+        ],
+        "fix": [
+            "@cs-fix",
+            "@rector-fix",
+            "@cs-fix",
             "@analyse"
         ],
         "analyse": [
