@@ -6,6 +6,7 @@ namespace Crustum\Broadcasting\TestSuite;
 use Cake\Queue\QueueManager;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\Job\BroadcastJob;
+use Crustum\Broadcasting\Job\BulkBroadcastJob;
 use Crustum\Broadcasting\Queue\QueueAdapterInterface;
 
 /**
@@ -156,6 +157,69 @@ class TestQueueAdapter implements QueueAdapterInterface
         });
 
         return array_values($filtered);
+    }
+
+    /**
+     * Get queued bulk broadcast jobs
+     *
+     * @return array<array<string, mixed>>
+     */
+    public static function getQueuedBulkBroadcastJobs(): array
+    {
+        return static::getQueuedJobsByClass(BulkBroadcastJob::class);
+    }
+
+    /**
+     * Flatten all items from queued BulkBroadcastJob payloads
+     *
+     * @return list<array{channel?: string, event?: string, data?: array<string, mixed>, socket?: string|null}>
+     */
+    public static function getQueuedBulkBroadcastItems(): array
+    {
+        $items = [];
+
+        foreach (static::getQueuedBulkBroadcastJobs() as $job) {
+            $broadcasts = $job['data']['broadcasts'] ?? [];
+            if (!is_array($broadcasts)) {
+                continue;
+            }
+
+            foreach ($broadcasts as $broadcast) {
+                if (is_array($broadcast)) {
+                    $items[] = $broadcast;
+                }
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Get queued bulk items matching an event name
+     *
+     * @param string $eventName Event name
+     * @return list<array{channel?: string, event?: string, data?: array<string, mixed>, socket?: string|null}>
+     */
+    public static function getQueuedBulkBroadcastsByEvent(string $eventName): array
+    {
+        return array_values(array_filter(
+            static::getQueuedBulkBroadcastItems(),
+            fn(array $item): bool => ($item['event'] ?? null) === $eventName,
+        ));
+    }
+
+    /**
+     * Get queued bulk items matching a channel
+     *
+     * @param string $channel Channel name
+     * @return list<array{channel?: string, event?: string, data?: array<string, mixed>, socket?: string|null}>
+     */
+    public static function getQueuedBulkBroadcastsByChannel(string $channel): array
+    {
+        return array_values(array_filter(
+            static::getQueuedBulkBroadcastItems(),
+            fn(array $item): bool => ($item['channel'] ?? null) === $channel,
+        ));
     }
 
     /**

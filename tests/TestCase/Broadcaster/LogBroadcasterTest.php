@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Crustum\Broadcasting\Test\TestCase\Broadcaster;
 
+use Cake\Log\Engine\ArrayLog;
+use Cake\Log\Log;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\LogBroadcaster;
 use Psr\Http\Message\ServerRequestInterface;
@@ -15,6 +17,27 @@ use Psr\Http\Message\UriInterface;
  */
 class LogBroadcasterTest extends TestCase
 {
+    /**
+     * Array log engine name used by tests that capture messages.
+     *
+     * @var string
+     */
+    protected string $arrayLogName = 'broadcasting_log_test';
+
+    /**
+     * tearDown method
+     *
+     * @return void
+     */
+    protected function tearDown(): void
+    {
+        if (Log::getConfig($this->arrayLogName) !== null) {
+            Log::drop($this->arrayLogName);
+        }
+
+        parent::tearDown();
+    }
+
     /**
      * Test broadcaster creation and basic properties
      *
@@ -79,10 +102,57 @@ class LogBroadcasterTest extends TestCase
         $event = 'message.sent';
         $payload = ['text' => 'Hello World!', 'user' => 'Evgeny'];
 
-        // Test that broadcasting doesn't throw an exception
         $broadcaster->broadcast($channels, $event, $payload);
 
-        // Method executed successfully without throwing exception
+        $this->assertSame('log', $broadcaster->getName());
+    }
+
+    /**
+     * Test bulkBroadcast logs a single summary instead of N broadcast lines
+     *
+     * @return void
+     */
+    public function testBulkBroadcastLogsSummary(): void
+    {
+        Log::setConfig($this->arrayLogName, [
+            'className' => ArrayLog::class,
+            'levels' => ['info'],
+        ]);
+
+        /** @var \Cake\Log\Engine\ArrayLog $engine */
+        $engine = Log::engine($this->arrayLogName);
+        $engine->clear();
+
+        $broadcaster = new LogBroadcaster();
+        $broadcaster->bulkBroadcast([
+            [
+                'channel' => 'user.1',
+                'event' => 'Notify',
+                'data' => ['id' => 1],
+            ],
+            [
+                'channel' => 'user.2',
+                'event' => 'Notify',
+                'data' => ['id' => 2],
+            ],
+        ]);
+
+        $messages = $engine->read();
+        $summaryMessages = array_values(array_filter(
+            $messages,
+            fn(string $message): bool => str_contains($message, 'Bulk Broadcasting 2 messages'),
+        ));
+
+        $this->assertCount(1, $summaryMessages);
+        $this->assertStringContainsString('user.1', $summaryMessages[0]);
+        $this->assertStringContainsString('user.2', $summaryMessages[0]);
+        $this->assertCount(
+            0,
+            array_filter(
+                $messages,
+                fn(string $message): bool => str_contains($message, 'Broadcasting [Notify] on channels'),
+            ),
+        );
     }
 
     /**
@@ -98,7 +168,6 @@ class LogBroadcasterTest extends TestCase
         $broadcaster->setConfig($config);
         $this->assertEquals($config, $broadcaster->getConfig());
 
-        // Test updating configuration
         $newConfig = ['updated' => 'value', 'new' => 'data'];
         $broadcaster->setConfig($newConfig);
         $this->assertEquals($newConfig, $broadcaster->getConfig());

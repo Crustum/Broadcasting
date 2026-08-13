@@ -106,6 +106,13 @@ return [
                     'port' => env('PUSHER_PORT', 443),
                     'scheme' => env('PUSHER_SCHEME', 'https'),
                 ],
+                /**
+                 * Personalized bulk (`triggerBatch`) max events per HTTP request.
+                 * Pusher multi-tenant cloud limit is 100; self-hosted servers may allow more.
+                 */
+                'bulk' => [
+                    'max_batch_size' => (int)env('PUSHER_BULK_MAX_BATCH_SIZE', 100),
+                ],
             ],
 
             /**

@@ -471,6 +471,82 @@ trait BroadcastingTrait
     }
 
     /**
+     * Assert bulk broadcast jobs were queued
+     *
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertBulkBroadcastQueued(string $message = ''): void
+    {
+        $jobs = TestQueueAdapter::getQueuedBulkBroadcastJobs();
+        $this->assertNotEmpty(
+            $jobs,
+            $message ?: 'No BulkBroadcastJob was queued',
+        );
+    }
+
+    /**
+     * Assert a specific count of BulkBroadcastJob entries were queued
+     *
+     * @param int $count Expected job count
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertBulkBroadcastQueuedCount(int $count, string $message = ''): void
+    {
+        $actualCount = count(TestQueueAdapter::getQueuedBulkBroadcastJobs());
+        $this->assertEquals(
+            $count,
+            $actualCount,
+            $message ?: "Expected {$count} BulkBroadcastJob(s) queued, but {$actualCount} were queued",
+        );
+    }
+
+    /**
+     * Assert a bulk-queued item exists for an event
+     *
+     * @param string $event Event name
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertBulkBroadcastQueuedEvent(string $event, string $message = ''): void
+    {
+        $items = TestQueueAdapter::getQueuedBulkBroadcastsByEvent($event);
+        $this->assertNotEmpty(
+            $items,
+            $message ?: "Bulk broadcast event {$event} was not queued",
+        );
+    }
+
+    /**
+     * Assert a bulk-queued item exists for a channel and event
+     *
+     * @param string $channel Channel name
+     * @param string $event Event name
+     * @param string $message Optional assertion message
+     * @return void
+     */
+    public function assertBulkBroadcastQueuedToChannel(
+        string $channel,
+        string $event,
+        string $message = '',
+    ): void {
+        $items = TestQueueAdapter::getQueuedBulkBroadcastsByChannel($channel);
+        $found = false;
+        foreach ($items as $item) {
+            if (($item['event'] ?? null) === $event) {
+                $found = true;
+                break;
+            }
+        }
+
+        $this->assertTrue(
+            $found,
+            $message ?: "Bulk broadcast {$event} was not queued to channel {$channel}",
+        );
+    }
+
+    /**
      * Get all queued jobs
      *
      * @return array<array<string, mixed>>
@@ -478,6 +554,26 @@ trait BroadcastingTrait
     public function getQueuedJobs(): array
     {
         return TestQueueAdapter::getQueuedJobs();
+    }
+
+    /**
+     * Get queued bulk broadcast jobs
+     *
+     * @return array<array<string, mixed>>
+     */
+    public function getQueuedBulkBroadcastJobs(): array
+    {
+        return TestQueueAdapter::getQueuedBulkBroadcastJobs();
+    }
+
+    /**
+     * Get flattened bulk items from queued BulkBroadcastJob payloads
+     *
+     * @return list<array{channel?: string, event?: string, data?: array<string, mixed>, socket?: string|null}>
+     */
+    public function getQueuedBulkBroadcastItems(): array
+    {
+        return TestQueueAdapter::getQueuedBulkBroadcastItems();
     }
 
     /**

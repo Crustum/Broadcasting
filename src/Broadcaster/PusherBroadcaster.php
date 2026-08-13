@@ -201,6 +201,64 @@ class PusherBroadcaster extends BaseBroadcaster
     }
 
     /**
+     * Broadcast multiple personalized messages via Pusher batch API.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat broadcast specs
+     * @param int $chunkSize Max events per triggerBatch call
+     * @return void
+     */
+    public function bulkBroadcast(array $broadcasts, int $chunkSize = 100): void
+    {
+        $normalized = $this->normalizeBulkBroadcasts($broadcasts);
+        if ($normalized === []) {
+            return;
+        }
+
+        $maxBatchSize = (int)($this->config['bulk']['max_batch_size'] ?? 100);
+        if ($maxBatchSize < 1) {
+            $maxBatchSize = 100;
+        }
+
+        $chunkSize = max(1, min($chunkSize, $maxBatchSize));
+
+        foreach (array_chunk($normalized, $chunkSize) as $chunk) {
+            $batchPayload = [];
+
+            foreach ($chunk as $item) {
+                $channels = $this->formatChannels([$item['channel']]);
+                $channelName = $channels[0] ?? $item['channel'];
+                $payload = $item['data'];
+
+                $this->logBroadcast([$channelName], $item['event'], $item['socket'] !== null
+                    ? $payload + ['socket' => $item['socket']]
+                    : $payload);
+
+                $entry = [
+                    'channel' => $channelName,
+                    'name' => $item['event'],
+                    'data' => $payload,
+                ];
+
+                if ($item['socket'] !== null) {
+                    $entry['socket_id'] = $item['socket'];
+                }
+
+                $batchPayload[] = $entry;
+            }
+
+            try {
+                $this->pusherClient->triggerBatch($batchPayload);
+            } catch (Exception $exception) {
+                throw new BroadcastingException(
+                    'Pusher bulk broadcast failed: ' . $exception->getMessage(),
+                    500,
+                    $exception,
+                );
+            }
+        }
+    }
+
+    /**
      * Get the broadcaster name.
      *
      * @return string

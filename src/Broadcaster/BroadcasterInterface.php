@@ -59,6 +59,18 @@ interface BroadcasterInterface
     public function broadcast(array $channels, string $event, array $payload = []): void;
 
     /**
+     * Broadcast multiple personalized messages.
+     *
+     * Accepts broadcastable event objects and/or flat specs
+     * `{channel, event, data, socket?}`.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat specs
+     * @param int $chunkSize Max items per driver batch request
+     * @return void
+     */
+    public function bulkBroadcast(array $broadcasts, int $chunkSize = 100): void;
+
+    /**
      * Get the broadcaster name.
      *
      * @return string

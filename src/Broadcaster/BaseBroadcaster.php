@@ -12,6 +12,9 @@ use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\Utility\Inflector;
 use Closure;
 use Crustum\Broadcasting\Channel\ChannelInterface;
+use Crustum\Broadcasting\Event\BroadcastableInterface;
+use Crustum\Broadcasting\Event\ConditionalInterface;
+use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidChannelException;
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
@@ -371,6 +374,135 @@ abstract class BaseBroadcaster implements BroadcasterInterface
     protected function formatChannels(array $channels): array
     {
         return array_map(fn($channel): string => (string)$channel, $channels);
+    }
+
+    /**
+     * Broadcast multiple personalized messages.
+     *
+     * Default implementation loops single `broadcast()` calls so Log, Null,
+     * Redis, and test drivers work without a special batch path.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat broadcast specs
+     * @param int $chunkSize Max items per driver batch (unused by default loop)
+     * @return void
+     */
+    public function bulkBroadcast(array $broadcasts, int $chunkSize = 100): void
+    {
+        $normalized = $this->normalizeBulkBroadcasts($broadcasts);
+
+        foreach ($normalized as $item) {
+            $payload = $item['data'];
+            if ($item['socket'] !== null) {
+                $payload['socket'] = $item['socket'];
+            }
+
+            $this->broadcast([$item['channel']], $item['event'], $payload);
+        }
+    }
+
+    /**
+     * Normalize bulk broadcasts to flat specs.
+     *
+     * Expands multi-channel events and skips conditional events that
+     * return false from `broadcastWhen()`.
+     *
+     * @param array<mixed> $broadcasts Event objects or flat broadcast specs
+     * @return list<array{channel: string, event: string, data: array<string, mixed>, socket: string|null}>
+     */
+    public function normalizeBulkBroadcasts(array $broadcasts): array
+    {
+        $normalized = [];
+
+        foreach ($broadcasts as $broadcast) {
+            if ($broadcast instanceof BroadcastableInterface) {
+                foreach ($this->eventToBulkItems($broadcast) as $item) {
+                    $normalized[] = $item;
+                }
+
+                continue;
+            }
+
+            if (!is_array($broadcast)) {
+                throw new BroadcastingException(
+                    'Bulk broadcast items must be BroadcastableInterface instances or arrays.',
+                    500,
+                );
+            }
+
+            $normalized[] = $this->normalizeFlatBulkItem($broadcast);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Convert a broadcastable event into one flat item per channel.
+     *
+     * @param \Crustum\Broadcasting\Event\BroadcastableInterface $event Event object
+     * @return list<array{channel: string, event: string, data: array<string, mixed>, socket: string|null}>
+     */
+    protected function eventToBulkItems(BroadcastableInterface $event): array
+    {
+        if ($event instanceof ConditionalInterface && !$event->broadcastWhen()) {
+            return [];
+        }
+
+        $channels = $event->broadcastChannel();
+        $channelArray = is_array($channels) ? $channels : [$channels];
+        $eventName = $event->broadcastEvent();
+        $data = $event->broadcastData() ?? [];
+        $socket = $event->broadcastSocket();
+
+        $results = [];
+        foreach ($channelArray as $channel) {
+            $results[] = [
+                'channel' => $channel->getName(),
+                'event' => $eventName,
+                'data' => $data,
+                'socket' => $socket,
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * Normalize a flat bulk broadcast array.
+     *
+     * @param array<string, mixed> $broadcast Flat broadcast spec
+     * @return array{channel: string, event: string, data: array<string, mixed>, socket: string|null}
+     */
+    protected function normalizeFlatBulkItem(array $broadcast): array
+    {
+        if (!isset($broadcast['channel'], $broadcast['event'])) {
+            throw new BroadcastingException(
+                'Flat bulk broadcast items require channel and event keys.',
+                500,
+            );
+        }
+
+        $data = $broadcast['data'] ?? [];
+        if (!is_array($data)) {
+            throw new BroadcastingException(
+                'Flat bulk broadcast data must be an array when provided.',
+                500,
+            );
+        }
+
+        $socket = $broadcast['socket'] ?? null;
+        if ($socket !== null && !is_string($socket)) {
+            throw new BroadcastingException(
+                'Flat bulk broadcast socket must be a string or null.',
+                500,
+            );
+        }
+
+        return [
+            'channel' => (string)$broadcast['channel'],
+            'event' => (string)$broadcast['event'],
+            'data' => $data,
+            'socket' => $socket,
+        ];
     }
 
     /**
