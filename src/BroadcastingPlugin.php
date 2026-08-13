@@ -23,6 +23,33 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
     use ManifestTrait;
 
     /**
+     * Dispatched before a broadcast is sent to a driver.
+     *
+     * Listeners may return an array via the event result to replace the payload
+     * (for example to attach reserved `__crustum` correlation metadata).
+     *
+     * @var string
+     */
+    public const EVENT_BEFORE_SEND = 'Broadcasting.beforeSend';
+
+    /**
+     * Dispatched after a broadcast has been sent to a driver.
+     *
+     * @var string
+     */
+    public const EVENT_SENT = 'Broadcasting.sent';
+
+    /**
+     * Reserved payload key for cross-process debug metadata.
+     *
+     * Drivers / WebSocket servers (for example BlazeCast) must strip this key
+     * before delivering payloads to clients. Broadcasting itself does not require Speculum.
+     *
+     * @var string
+     */
+    public const RESERVED_META_KEY = '__crustum';
+
+    /**
      * Load all the plugin configuration and bootstrap logic.
      *
      * The host application is provided as an argument. This allows you to load
@@ -73,6 +100,11 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
 
     /**
      * Add routes for the plugin.
+     *
+     * Registers `/broadcasting/auth` and `/broadcasting/user-auth`.
+     * When the host application enables `CsrfProtectionMiddleware` globally,
+     * those actions must be excluded via `skipCheckCallback` or by not applying
+     * CSRF to this plugin scope. See docs/index.md#csrf-and-channel-authorization.
      *
      * If your plugin has many routes and you would like to isolate them into a separate file,
      * you can create `$plugin/config/routes.php` and delete this method.

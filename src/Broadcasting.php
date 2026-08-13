@@ -163,35 +163,55 @@ class Broadcasting
         try {
             $registry->load($name, $config);
         } catch (Throwable $throwable) {
-            if (!array_key_exists('fallback', $config)) {
-                $registry->set($name, new NullBroadcaster());
-                trigger_error($throwable->getMessage(), E_USER_WARNING);
-
-                return;
-            }
-
-            if ($config['fallback'] === false) {
-                throw new BroadcastingException(
-                    sprintf(
-                        'Failed to create broadcaster for connection "%s" with error: %s.',
-                        $name,
-                        $throwable->getMessage(),
-                    ),
-                    0,
-                    $throwable,
-                );
-            }
-
-            if ($config['fallback'] === $name) {
-                throw new InvalidBroadcasterException(sprintf(
-                    '`%s` broadcasting configuration cannot fallback to itself.',
-                    $name,
-                ), 0, $throwable);
-            }
-
-            $fallbackBroadcaster = clone static::get($config['fallback']);
-            $registry->set($name, $fallbackBroadcaster);
+            static::handleBroadcasterBuildFailure($name, $config, $registry, $throwable);
         }
+    }
+
+    /**
+     * Apply fallback / null-broadcaster handling when driver creation fails.
+     *
+     * @param string $name Connection name
+     * @param array<string, mixed> $config Connection config
+     * @param \Crustum\Broadcasting\Registry\BroadcasterRegistry $registry Registry
+     * @param \Throwable $throwable Creation failure
+     * @return void
+     * @throws \Crustum\Broadcasting\Exception\BroadcastingException
+     * @throws \Crustum\Broadcasting\Exception\InvalidBroadcasterException
+     */
+    protected static function handleBroadcasterBuildFailure(
+        string $name,
+        array $config,
+        BroadcasterRegistry $registry,
+        Throwable $throwable,
+    ): void {
+        if (!array_key_exists('fallback', $config)) {
+            $registry->set($name, new NullBroadcaster());
+            trigger_error($throwable->getMessage(), E_USER_WARNING);
+
+            return;
+        }
+
+        if ($config['fallback'] === false) {
+            throw new BroadcastingException(
+                sprintf(
+                    'Failed to create broadcaster for connection "%s" with error: %s.',
+                    $name,
+                    $throwable->getMessage(),
+                ),
+                0,
+                $throwable,
+            );
+        }
+
+        if ($config['fallback'] === $name) {
+            throw new InvalidBroadcasterException(sprintf(
+                '`%s` broadcasting configuration cannot fallback to itself.',
+                $name,
+            ), 0, $throwable);
+        }
+
+        $fallbackBroadcaster = clone static::get($config['fallback']);
+        $registry->set($name, $fallbackBroadcaster);
     }
 
     /**
@@ -328,9 +348,9 @@ class Broadcasting
             static::_buildBroadcaster($connection);
         } catch (InvalidBroadcasterException $invalidBroadcasterException) {
             if ($connection === 'default') {
-                $connection = Configure::read('Broadcasting.default');
+                $connection = Configure::read('Broadcasting.default') ?? 'null';
 
-                return static::get($connection);
+                return static::get((string)$connection);
             }
 
             throw $invalidBroadcasterException;

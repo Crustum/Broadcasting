@@ -786,4 +786,24 @@ class BroadcastingTest extends TestCase
         $this->assertContains('test1', $configured);
         $this->assertContains('test2', $configured);
     }
+
+    /**
+     * Test get falls back to null driver when Broadcasting.default is unset
+     *
+     * @return void
+     */
+    public function testGetDefaultFallsBackToNullConnection(): void
+    {
+        $this->clearBroadcastingConfigurations();
+        Configure::delete('Broadcasting.default');
+
+        Broadcasting::setConfig('null', [
+            'className' => TestBroadcaster::class,
+            'connectionName' => 'null',
+        ]);
+
+        $broadcaster = Broadcasting::get('default');
+
+        $this->assertInstanceOf(TestBroadcaster::class, $broadcaster);
+    }
 }

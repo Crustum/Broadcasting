@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Crustum\Broadcasting;
 
+use Cake\Event\Event;
+use Cake\Event\EventManager;
 use Crustum\Broadcasting\Channel\Channel;
 use Crustum\Broadcasting\Trait\SocketAwareTrait;
 use RuntimeException;
@@ -237,16 +239,52 @@ class PendingBroadcast
         }
 
         $channelNames = $this->getChannelNames();
-        $payload = $this->data;
+        $originalPayload = $this->data;
         if ($this->socket !== null) {
-            $payload['socket'] = $this->socket;
+            $originalPayload['socket'] = $this->socket;
         }
+
+        $payload = $this->applyBeforeSendListeners($channelNames, $originalPayload);
 
         Broadcasting::get($this->connectionName)->broadcast(
             $channelNames,
             $this->eventName,
             $payload,
         );
+
+        EventManager::instance()->dispatch(new Event(BroadcastingPlugin::EVENT_SENT, $this, [
+            'channels' => $channelNames,
+            'event' => $this->eventName,
+            'payload' => $payload,
+            'originalPayload' => $originalPayload,
+            'connection' => $this->connectionName,
+            'queued' => false,
+        ]));
+    }
+
+    /**
+     * Allow listeners to enrich or replace the outgoing payload.
+     *
+     * @param list<string> $channelNames Channel names.
+     * @param array<string, mixed> $payload Payload before listeners.
+     * @return array<string, mixed>
+     */
+    protected function applyBeforeSendListeners(array $channelNames, array $payload): array
+    {
+        $event = new Event(BroadcastingPlugin::EVENT_BEFORE_SEND, $this, [
+            'channels' => $channelNames,
+            'event' => $this->eventName,
+            'payload' => $payload,
+            'connection' => $this->connectionName,
+        ]);
+        EventManager::instance()->dispatch($event);
+
+        $result = $event->getResult();
+        if (is_array($result)) {
+            return $result;
+        }
+
+        return $payload;
     }
 
     /**
@@ -343,10 +381,13 @@ class PendingBroadcast
     /**
      * Get channel names as strings.
      *
-     * @return array<string>
+     * @return list<string>
      */
     protected function getChannelNames(): array
     {
-        return array_map(fn($channel) => $channel->getName(), $this->channels);
+        return array_values(array_map(
+            static fn(Channel $channel): string => $channel->getName(),
+            $this->channels,
+        ));
     }
 }
