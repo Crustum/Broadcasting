@@ -16,7 +16,6 @@
         "cakephp/authorization": "*",
         "cakephp/queue": "^2.2",
         "crustum/plugin-manifest": "^1.0",
-        "firebase/php-jwt": "^6.11",
         "guzzlehttp/psr7": "^2.6",
         "pusher/pusher-php-server": "^7.2",
         "symfony/routing": "^6.0|^7.3",
@@ -49,7 +48,14 @@
     "scripts": {
         "check": [
             "@cs-check",
+            "@rector-check",
             "@test",
+            "@analyse"
+        ],
+        "fix": [
+            "@cs-fix",
+            "@rector-fix",
+            "@cs-fix",
             "@analyse"
         ],
         "analyse": [
@@ -63,7 +69,8 @@
         "test:coverage": "phpunit --coverage-html coverage",
         "stan": "tools/phpstan analyse src/ tests/",
         "psalm": "tools/psalm --show-info=false",
-        "rector": "rector",
+        "rector-check": "vendor/bin/rector process --dry-run",
+        "rector-fix": "vendor/bin/rector process",
         "stan-tests": "tools/phpstan analyze -c tests/phpstan.neon",
         "stan-baseline": "tools/phpstan --generate-baseline"
     },

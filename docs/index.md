@@ -20,6 +20,7 @@
 - [Authorizing Channels](#authorizing-channels)
     - [Defining Authorization Callbacks](#defining-authorization-callbacks)
     - [Channel Authorization Routes](#channel-authorization-routes)
+    - [CSRF and Channel Authorization](#csrf-and-channel-authorization)
 - [Broadcasting Events](#broadcasting-events)
     - [Only to Others](#only-to-others)
     - [Customizing the Connection](#customizing-the-connection)
@@ -29,7 +30,7 @@
     - [Listening for Events](#listening-for-events)
     - [Leaving a Channel](#leaving-a-channel)
     - [Namespaces](#namespaces)
-    - [Using React or Vue](#using-react-or-vue)
+    - [Using React, Vue, or Svelte](#using-react-vue-or-svelte)
 - [Presence Channels](#presence-channels)
     - [Authorizing Presence Channels](#authorizing-presence-channels)
     - [Joining Presence Channels](#joining-presence-channels)
@@ -39,6 +40,7 @@
     - [Listening for Model Broadcasts](#listening-for-model-broadcasts)
 - [Client Events](#client-events)
 - [Notifications](#notifications)
+    - [Using React, Vue, or Svelte](#notifications-using-react-vue-or-svelte)
     - [Stop Listening for Notifications](#stop-listening-for-notifications)
 - [Testing](#testing)
     - [Asserting Broadcasts Sent](#asserting-broadcasts-sent)
@@ -229,7 +231,7 @@ npm install --save-dev laravel-echo pusher-js
 <a name="client-pusher-channels"></a>
 #### Pusher Channels
 
-Once Echo is installed, you are ready to create a fresh Echo instance in your application's JavaScript. A great place to do this is at the bottom of the `resources/js/bootstrap.js` file:
+Once Echo is installed, you are ready to create a fresh Echo instance in your application's JavaScript. A great place to do this is at the bottom of the `resources/js/app.js` file:
 
 ```js
 import Echo from 'laravel-echo';
@@ -690,6 +692,65 @@ Ensure the plugin is loaded so bootstrap still initializes broadcasters and incl
 
 The plugin provides a `BroadcastingAuthController` that handles these authorization requests. You may customize this controller by extending it or by defining your own routes.
 
+<a name="csrf-and-channel-authorization"></a>
+### CSRF and Channel Authorization
+
+Echo (and other Pusher-compatible clients) authorize private and presence channels with an HTTP `POST` to `/broadcasting/auth` (and optionally `/broadcasting/user-auth`). Those requests typically send the session cookie for identity, but **do not** send a CakePHP CSRF form token.
+
+CakePHP does not provide Laravel-style per-route `withoutMiddleware(...)`. CSRF is usually registered once on the application middleware queue (or applied to a broad routing scope). The Broadcasting plugin therefore **does not** disable CSRF itself — the **host application** must exclude the auth endpoints when CSRF is enabled.
+
+> [!IMPORTANT]
+> If `CsrfProtectionMiddleware` (or `SessionCsrfProtectionMiddleware`) runs for `/broadcasting/auth` without a skip, Echo channel authorization will fail with CSRF / 403 errors even when the user is logged in and channel callbacks are correct.
+
+#### Recommended: `skipCheckCallback` on global CSRF
+
+When CSRF is added in `Application::middleware()`, skip the Broadcasting auth actions:
+
+```php
+use Cake\Http\Middleware\CsrfProtectionMiddleware;
+use Cake\Http\MiddlewareQueue;
+
+public function middleware(MiddlewareQueue $middlewareQueue): MiddlewareQueue
+{
+    $csrf = new CsrfProtectionMiddleware();
+    $csrf->skipCheckCallback(function ($request) {
+        if ($request->getParam('plugin') !== 'Crustum/Broadcasting') {
+            return false;
+        }
+
+        return in_array($request->getParam('action'), ['auth', 'userAuth'], true);
+    });
+
+    $middlewareQueue
+        ->add(new \Cake\Routing\Middleware\RoutingMiddleware($this))
+        ->add($csrf);
+
+    return $middlewareQueue;
+}
+```
+
+#### Alternative: scoped CSRF (do not apply to Broadcasting)
+
+Register CSRF and apply it only to scopes that need form protection; leave the Broadcasting plugin routes outside that scope:
+
+```php
+$routes->registerMiddleware('csrf', new CsrfProtectionMiddleware());
+
+$routes->scope('/', function (RouteBuilder $routes): void {
+    $routes->applyMiddleware('csrf');
+});
+```
+
+Do **not** call `$builder->applyMiddleware('csrf')` inside the `Crustum/Broadcasting` plugin route group if you use this pattern.
+
+#### What still protects auth
+
+Skipping CSRF on these endpoints matches the usual realtime stack. Authorization still depends on:
+
+1. Session / Authentication identity on the request
+2. Channel callbacks (or channel classes) in `config/channels.php`
+3. For WebSocket Origin / CORS on the realtime server — configure the server (for example BlazeCast `allowed_origins`), not CSRF middleware
+
 <a name="broadcasting-events"></a>
 ## Broadcasting Events
 
@@ -934,12 +995,14 @@ Echo.channel('orders')
     });
 ```
 
-<a name="using-react-or-vue"></a>
-### Using React or Vue
+<a name="using-react-vue-or-svelte"></a>
+### Using React, Vue, or Svelte
 
-Laravel Echo includes React and Vue hooks that make it painless to listen for events. To get started, invoke the `useEcho` hook, which is used to listen for private events. The `useEcho` hook will automatically leave channels when the consuming component is unmounted:
+Laravel Echo includes React, Vue, and Svelte hooks that make it painless to listen for events. To get started, invoke the `useEcho` hook, which is used to listen for private events. The `useEcho` hook will automatically leave channels when the consuming component is unmounted:
 
-```js tab=React
+::: code-group
+
+```js [React]
 import { useEcho } from "@laravel/echo-react";
 
 useEcho(
@@ -951,7 +1014,7 @@ useEcho(
 );
 ```
 
-```vue tab=Vue
+```vue [Vue]
 <script setup lang="ts">
 import { useEcho } from "@laravel/echo-vue";
 
@@ -964,6 +1027,22 @@ useEcho(
 );
 </script>
 ```
+
+```svelte [Svelte]
+<script>
+import { useEcho } from "@laravel/echo-svelte";
+
+useEcho(
+    `orders.${orderId}`,
+    "OrderShipmentStatusUpdated",
+    (e) => {
+        console.log(e.order);
+    },
+);
+</script>
+```
+
+:::
 
 You may listen to multiple events by providing an array of events to `useEcho`:
 
@@ -999,7 +1078,9 @@ useEcho<OrderData>(`orders.${orderId}`, "OrderShipmentStatusUpdated", (e) => {
 
 The `useEcho` hook will automatically leave channels when the consuming component is unmounted; however, you may utilize the returned functions to manually stop / start listening to channels programmatically when necessary:
 
-```js tab=React
+::: code-group
+
+```js [React]
 import { useEcho } from "@laravel/echo-react";
 
 const { leaveChannel, leave, stopListening, listen } = useEcho(
@@ -1023,7 +1104,7 @@ leaveChannel();
 leave();
 ```
 
-```vue tab=Vue
+```vue [Vue]
 <script setup lang="ts">
 import { useEcho } from "@laravel/echo-vue";
 
@@ -1049,12 +1130,35 @@ leave();
 </script>
 ```
 
+```svelte [Svelte]
+<script>
+import { useEcho } from "@laravel/echo-svelte";
+
+const { leaveChannel, leave, stopListening, listen } = useEcho(
+    `orders.${orderId}`,
+    "OrderShipmentStatusUpdated",
+    (e) => {
+        console.log(e.order);
+    },
+);
+
+stopListening();
+listen();
+leaveChannel();
+leave();
+</script>
+```
+
+:::
+
 <a name="react-vue-connecting-to-public-channels"></a>
 #### Connecting to Public Channels
 
 To connect to a public channel, you may use the `useEchoPublic` hook:
 
-```js tab=React
+::: code-group
+
+```js [React]
 import { useEchoPublic } from "@laravel/echo-react";
 
 useEchoPublic("posts", "PostPublished", (e) => {
@@ -1062,7 +1166,7 @@ useEchoPublic("posts", "PostPublished", (e) => {
 });
 ```
 
-```vue tab=Vue
+```vue [Vue]
 <script setup lang="ts">
 import { useEchoPublic } from "@laravel/echo-vue";
 
@@ -1072,12 +1176,26 @@ useEchoPublic("posts", "PostPublished", (e) => {
 </script>
 ```
 
+```svelte [Svelte]
+<script>
+import { useEchoPublic } from "@laravel/echo-svelte";
+
+useEchoPublic("posts", "PostPublished", (e) => {
+    console.log(e.post);
+});
+</script>
+```
+
+:::
+
 <a name="react-vue-connecting-to-presence-channels"></a>
 #### Connecting to Presence Channels
 
 To connect to a presence channel, you may use the `useEchoPresence` hook:
 
-```js tab=React
+::: code-group
+
+```js [React]
 import { useEchoPresence } from "@laravel/echo-react";
 
 useEchoPresence("posts", "PostPublished", (e) => {
@@ -1085,7 +1203,7 @@ useEchoPresence("posts", "PostPublished", (e) => {
 });
 ```
 
-```vue tab=Vue
+```vue [Vue]
 <script setup lang="ts">
 import { useEchoPresence } from "@laravel/echo-vue";
 
@@ -1095,12 +1213,26 @@ useEchoPresence("posts", "PostPublished", (e) => {
 </script>
 ```
 
+```svelte [Svelte]
+<script>
+import { useEchoPresence } from "@laravel/echo-svelte";
+
+useEchoPresence("posts", "PostPublished", (e) => {
+    console.log(e.post);
+});
+</script>
+```
+
+:::
+
 <a name="react-vue-connection-status"></a>
 #### Connection Status
 
 You may retrieve the current WebSocket connection status using the `useConnectionStatus` hook, which provides reactive status that automatically updates when the connection state changes:
 
-```js tab=React
+::: code-group
+
+```js [React]
 import { useConnectionStatus } from "@laravel/echo-react";
 
 function ConnectionIndicator() {
@@ -1110,7 +1242,7 @@ function ConnectionIndicator() {
 }
 ```
 
-```vue tab=Vue
+```vue [Vue]
 <script setup lang="ts">
 import { useConnectionStatus } from "@laravel/echo-vue";
 
@@ -1122,6 +1254,18 @@ const status = useConnectionStatus();
 </template>
 ```
 
+```svelte [Svelte]
+<script>
+import { useConnectionStatus } from "@laravel/echo-svelte";
+
+const status = useConnectionStatus();
+</script>
+
+<div>Connection: {status()}</div>
+```
+
+:::
+
 The possible status values are:
 
 - `connected` — Successfully connected to the WebSocket server.
@@ -1129,6 +1273,47 @@ The possible status values are:
 - `reconnecting` — Attempting to reconnect after a disconnection.
 - `disconnected` — Not connected and not attempting to reconnect.
 - `failed` — Connection failed and won't retry.
+
+<a name="react-vue-socket-id"></a>
+#### Socket ID
+
+You may retrieve the current WebSocket socket ID using the `useSocketId` hook, which provides a reactive value that automatically updates when the connection reconnects with a new socket ID:
+
+::: code-group
+
+```js [React]
+import { useSocketId } from "@laravel/echo-react";
+
+function SocketIndicator() {
+    const socketId = useSocketId();
+
+    return <div>Socket ID: {socketId}</div>;
+}
+```
+
+```vue [Vue]
+<script setup lang="ts">
+import { useSocketId } from "@laravel/echo-vue";
+
+const socketId = useSocketId();
+</script>
+
+<template>
+    <div>Socket ID: {{ socketId }}</div>
+</template>
+```
+
+```svelte [Svelte]
+<script>
+import { useSocketId } from "@laravel/echo-svelte";
+
+const socketId = useSocketId();
+</script>
+
+<div>Socket ID: {socketId()}</div>
+```
+
+:::
 
 <a name="presence-channels"></a>
 ## Presence Channels
@@ -1447,6 +1632,117 @@ Echo.private(`App.Model.Entity.User.${userId}`)
 ```
 
 In this example, all notifications sent to `App\Model\Entity\User` instances via the `broadcast` channel would be received by the callback. A channel authorization callback for the `App.Model.Entity.User.{id}` channel is included in your application's `config/channels.php` file.
+
+<a name="notifications-using-react-vue-or-svelte"></a>
+### Using React, Vue, or Svelte
+
+Laravel Echo includes React, Vue, and Svelte hooks that make it painless to listen for notifications. To get started, invoke the `useEchoNotification` hook, which is used to listen for notifications. The `useEchoNotification` hook will automatically leave channels when the consuming component is unmounted:
+
+::: code-group
+
+```js [React]
+import { useEchoNotification } from "@laravel/echo-react";
+
+useEchoNotification(
+    `App.Model.Entity.User.${userId}`,
+    (notification) => {
+        console.log(notification.type);
+    },
+);
+```
+
+```vue [Vue]
+<script setup lang="ts">
+import { useEchoNotification } from "@laravel/echo-vue";
+
+useEchoNotification(
+    `App.Model.Entity.User.${userId}`,
+    (notification) => {
+        console.log(notification.type);
+    },
+);
+</script>
+```
+
+```svelte [Svelte]
+<script>
+import { useEchoNotification } from "@laravel/echo-svelte";
+
+useEchoNotification(
+    `App.Model.Entity.User.${userId}`,
+    (notification) => {
+        console.log(notification.type);
+    },
+);
+</script>
+```
+
+:::
+
+By default, the hook listens to all notifications. To specify the notification types you would like to listen to, you can provide either a string or array of types to `useEchoNotification`:
+
+::: code-group
+
+```js [React]
+import { useEchoNotification } from "@laravel/echo-react";
+
+useEchoNotification(
+    `App.Model.Entity.User.${userId}`,
+    (notification) => {
+        console.log(notification.type);
+    },
+    'App.Notification.InvoicePaid',
+);
+```
+
+```vue [Vue]
+<script setup lang="ts">
+import { useEchoNotification } from "@laravel/echo-vue";
+
+useEchoNotification(
+    `App.Model.Entity.User.${userId}`,
+    (notification) => {
+        console.log(notification.type);
+    },
+    'App.Notification.InvoicePaid',
+);
+</script>
+```
+
+```svelte [Svelte]
+<script>
+import { useEchoNotification } from "@laravel/echo-svelte";
+
+useEchoNotification(
+    `App.Model.Entity.User.${userId}`,
+    (notification) => {
+        console.log(notification.type);
+    },
+    'App.Notification.InvoicePaid',
+);
+</script>
+```
+
+:::
+
+You may also specify the shape of the notification payload data, providing greater type safety and editing convenience:
+
+```ts
+type InvoicePaidNotification = {
+    invoice_id: number;
+    created_at: string;
+};
+
+useEchoNotification<InvoicePaidNotification>(
+    `App.Model.Entity.User.${userId}`,
+    (notification) => {
+        console.log(notification.invoice_id);
+        console.log(notification.created_at);
+        console.log(notification.type);
+    },
+    'App.Notification.InvoicePaid',
+);
+```
 
 <a name="stop-listening-for-notifications"></a>
 ### Stop Listening for Notifications
