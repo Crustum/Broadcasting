@@ -7,6 +7,7 @@ use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\RedisBroadcaster;
 use Crustum\Broadcasting\Exception\BroadcastingException;
+use Redis;
 
 /**
  * RedisBroadcaster Test Case
@@ -259,5 +260,104 @@ class RedisBroadcasterTest extends TestCase
         $this->redisBroadcaster->broadcast($channels, $event, $payload);
 
         // Method executed successfully without throwing exception
+    }
+
+    /**
+     * Test bulkBroadcast publishes channel/message pairs via one Lua eval
+     *
+     * @return void
+     */
+    public function testBulkBroadcastUsesPersonalizedLuaScript(): void
+    {
+        $redis = $this->createMock(Redis::class);
+        $redis->expects($this->once())
+            ->method('eval')
+            ->with(
+                $this->stringContains('ARGV[i + 1]'),
+                $this->callback(fn(array $args): bool => count($args) === 4
+                    && $args[0] === 'user.1'
+                    && $args[2] === 'user.2'
+                    && is_string($args[1])
+                    && is_string($args[3])
+                    && str_contains($args[1], 'Notify')
+                    && str_contains($args[3], 'Notify')),
+                0,
+            );
+
+        $broadcaster = new TestableRedisBroadcaster([
+            'connection' => 'default',
+            'redis' => [
+                'host' => '127.0.0.1',
+                'port' => 6379,
+            ],
+        ], $redis);
+
+        $broadcaster->bulkBroadcast([
+            [
+                'channel' => 'user.1',
+                'event' => 'Notify',
+                'data' => ['id' => 1],
+            ],
+            [
+                'channel' => 'user.2',
+                'event' => 'Notify',
+                'data' => ['id' => 2],
+            ],
+        ]);
+    }
+
+    /**
+     * Test bulkBroadcast chunks personalized Lua evals
+     *
+     * @return void
+     */
+    public function testBulkBroadcastChunksEvalCalls(): void
+    {
+        $redis = $this->createMock(Redis::class);
+        $redis->expects($this->exactly(2))
+            ->method('eval')
+            ->willReturn(1);
+
+        $broadcaster = new TestableRedisBroadcaster([
+            'connection' => 'default',
+            'bulk' => [
+                'max_batch_size' => 2,
+            ],
+            'redis' => [
+                'host' => '127.0.0.1',
+                'port' => 6379,
+            ],
+        ], $redis);
+
+        $broadcasts = [];
+        for ($i = 0; $i < 3; $i++) {
+            $broadcasts[] = [
+                'channel' => 'user.' . $i,
+                'event' => 'Notify',
+                'data' => ['i' => $i],
+            ];
+        }
+
+        $broadcaster->bulkBroadcast($broadcasts, 2);
+    }
+
+    /**
+     * Test bulkBroadcast is a no-op for an empty list
+     *
+     * @return void
+     */
+    public function testBulkBroadcastWithEmptyList(): void
+    {
+        $redis = $this->createMock(Redis::class);
+        $redis->expects($this->never())->method('eval');
+
+        $broadcaster = new TestableRedisBroadcaster([
+            'connection' => 'default',
+            'redis' => [
+                'host' => '127.0.0.1',
+                'port' => 6379,
+            ],
+        ], $redis);
+        $broadcaster->bulkBroadcast([]);
     }
 }
