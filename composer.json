@@ -36,7 +36,6 @@
         "cakephp/cakephp-codesniffer": "^5.0",
         "rector/rector": "^2.5",
         "cakephp/bake": "^3.0",
-        "crustum/essentia": "1.0",
         "symfony/mercure": "^0.8.0",
         "web-token/jwt-library": "^4.2"
     },

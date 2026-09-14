@@ -5,7 +5,6 @@ namespace Crustum\Broadcasting\Test\TestCase\Mercure;
 
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Mercure\CachingTokenProvider;
-use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 
 /**
  * CachingTokenProvider Test Case
