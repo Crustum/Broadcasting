@@ -41,9 +41,11 @@ require ROOT . '/vendor/autoload.php';
 
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
+use Cake\Core\Plugin;
 use Cake\Datasource\ConnectionManager;
 use Cake\Error\ErrorTrap;
 use Cake\TestSuite\Fixture\SchemaLoader;
+use Crustum\Broadcasting\BroadcastingPlugin;
 
 Configure::write('App', ['namespace' => 'TestApp']);
 Configure::write('debug', true);
@@ -105,6 +107,11 @@ Configure::write('Authentication', [
     'unauthenticatedRedirect' => false,
     'queryParam' => 'redirect',
 ]);
+
+Plugin::getCollection()->add(new BroadcastingPlugin([
+    'path' => dirname(__FILE__, 2) . DS,
+    'routes' => true,
+]));
 
 $loader = new SchemaLoader();
 $loader->loadInternalFile(TESTS . 'schema.php');

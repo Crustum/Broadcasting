@@ -20,16 +20,6 @@ use Jose\Component\Encryption\Serializer\CompactSerializer;
 class MercureChannelEncrypterTest extends TestCase
 {
     /**
-     * @return void
-     */
-    protected function skipIfJoseMissing(): void
-    {
-        if (!class_exists(JWEBuilder::class)) {
-            $this->markTestSkipped('web-token/jwt-library is not installed.');
-        }
-    }
-
-    /**
      * @return string Raw 32-byte key
      */
     protected function key(): string
@@ -42,8 +32,6 @@ class MercureChannelEncrypterTest extends TestCase
      */
     public function testConstructorRejectsKeysThatAreNot32Bytes(): void
     {
-        $this->skipIfJoseMissing();
-
         $this->expectException(InvalidArgumentException::class);
 
         new ChannelEncrypter('too-short');
@@ -54,8 +42,6 @@ class MercureChannelEncrypterTest extends TestCase
      */
     public function testChannelKeyIsHkdfDerivedAndChannelSpecific(): void
     {
-        $this->skipIfJoseMissing();
-
         $encrypter = new ChannelEncrypter($this->key());
 
         $this->assertSame(
@@ -73,8 +59,6 @@ class MercureChannelEncrypterTest extends TestCase
      */
     public function testChannelJwkExposesTheChannelKeyAsUnpaddedUrlSafeBase64(): void
     {
-        $this->skipIfJoseMissing();
-
         $encrypter = new ChannelEncrypter($this->key());
         $jwk = $encrypter->channelJwk('private-encrypted-a');
 
@@ -93,8 +77,6 @@ class MercureChannelEncrypterTest extends TestCase
      */
     public function testEncryptRoundTripsThroughAStandardJweDecrypter(): void
     {
-        $this->skipIfJoseMissing();
-
         $encrypter = new ChannelEncrypter($this->key());
         $jwe = (new CompactSerializer())->unserialize(
             $encrypter->encrypt('{"event":"Tick"}', 'private-encrypted-a'),
@@ -121,8 +103,6 @@ class MercureChannelEncrypterTest extends TestCase
      */
     public function testAcceptsBase64PrefixedKeys(): void
     {
-        $this->skipIfJoseMissing();
-
         $encrypter = new ChannelEncrypter('base64:' . base64_encode(random_bytes(32)));
 
         $this->assertSame(32, strlen($encrypter->channelKey('private-encrypted-orders.1')));

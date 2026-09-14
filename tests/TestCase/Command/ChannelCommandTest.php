@@ -5,11 +5,10 @@ namespace Crustum\Broadcasting\Test\TestCase\Command;
 
 use Cake\Console\Arguments;
 use Cake\Console\CommandInterface;
-use Cake\Console\ConsoleIo;
 use Cake\Console\TestSuite\ConsoleIntegrationTestTrait;
 use Cake\Core\Configure;
+use Cake\Routing\Router;
 use Cake\TestSuite\TestCase;
-use Cake\View\Exception\MissingTemplateException;
 use Crustum\Broadcasting\Command\ChannelCommand;
 use ReflectionClass;
 use TestApp\Application;
@@ -25,20 +24,6 @@ class ChannelCommandTest extends TestCase
     use ConsoleIntegrationTestTrait;
 
     /**
-     * Generated file path
-     *
-     * @var string
-     */
-    protected string $generatedFile = '';
-
-    /**
-     * Generated files paths
-     *
-     * @var array<string>
-     */
-    protected array $generatedFiles = [];
-
-    /**
      * setUp method
      *
      * @return void
@@ -46,12 +31,17 @@ class ChannelCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Router::reload();
         $this->setAppNamespace('TestApp');
         $this->configApplication(Application::class, [CONFIG]);
+
+        $this->loadPlugins([
+            'Bake',
+        ]);
     }
 
     /**
-     * tearDown method
+     * Clean up generated files after tests
      *
      * @return void
      */
@@ -59,46 +49,16 @@ class ChannelCommandTest extends TestCase
     {
         parent::tearDown();
 
-        if ($this->generatedFile && file_exists($this->generatedFile)) {
-            unlink($this->generatedFile);
-            $this->generatedFile = '';
-        }
+        $files = [
+            APP . 'Broadcasting/OrderChannel.php',
+            APP . 'Broadcasting/MyChannel.php',
+        ];
 
-        if ($this->generatedFiles !== []) {
-            foreach ($this->generatedFiles as $file) {
-                if (file_exists($file)) {
-                    unlink($file);
-                }
+        foreach ($files as $file) {
+            if (file_exists($file)) {
+                unlink($file);
             }
-
-            $this->generatedFiles = [];
         }
-    }
-
-    /**
-     * Test execute with missing channel name
-     *
-     * @return void
-     */
-    public function testExecuteWithMissingName(): void
-    {
-        $command = new ChannelCommand();
-        $io = $this->createMock(ConsoleIo::class);
-
-        $io->expects($this->once())
-            ->method('err')
-            ->with($this->stringContains('You must provide a channel name'));
-
-        $io->expects($this->once())
-            ->method('out')
-            ->with($this->stringContains('Example: bin/cake bake channel Order'));
-
-        $args = $this->createMock(Arguments::class);
-        $args->method('getArgumentAt')->with(0)->willReturn(null);
-
-        $result = $command->execute($args, $io);
-
-        $this->assertEquals(CommandInterface::CODE_ERROR, $result);
     }
 
     /**
@@ -106,106 +66,46 @@ class ChannelCommandTest extends TestCase
      *
      * @return void
      */
-    public function testExecuteWithValidName(): void
+    public function testMain(): void
     {
-        $command = new ChannelCommand();
-        $command->plugin = 'Crustum/Broadcasting';
+        $this->exec('bake channel --force Order');
 
-        $io = $this->createMock(ConsoleIo::class);
-        $io->expects($this->never())->method('err');
-
-        $args = $this->createMock(Arguments::class);
-        $args->method('getArgumentAt')->with(0)->willReturn('Order');
-
-        $args->method('getOption')->willReturnCallback(function ($key): ?false {
-            if ($key === 'verbose') {
-                return false;
-            }
-
-            if ($key === 'force') {
-                return false;
-            }
-
-            return null;
-        });
-
-        $io->method('out')->willReturnCallback(function ($message, $level = 0): void {
-        });
-
-        $io->method('createFile')->willReturn(true);
-
-        try {
-            $content = $command->getContent('OrderChannel', $args, $io);
-            $this->assertNotEmpty($content);
-            $this->assertIsString($content);
-            $this->assertStringContainsString('OrderChannel', $content);
-        } catch (MissingTemplateException $missingTemplateException) {
-            $this->markTestSkipped('Template not available in test environment: ' . $missingTemplateException->getMessage());
-        }
+        $this->assertExitCode(CommandInterface::CODE_SUCCESS);
+        $file = APP . 'Broadcasting/OrderChannel.php';
+        $this->assertFileExists($file);
+        $contents = file_get_contents($file);
+        $this->assertIsString($contents);
+        $this->assertStringContainsString('class OrderChannel', $contents);
+        $this->assertStringContainsString('ChannelInterface', $contents);
     }
 
     /**
-     * Test getContent returns valid content
-     *
-     * @return void
-     */
-    public function testGetContentReturnsContent(): void
-    {
-        $command = new ChannelCommand();
-        $command->plugin = 'Crustum/Broadcasting';
-
-        $io = $this->createMock(ConsoleIo::class);
-        $args = $this->createMock(Arguments::class);
-
-        $args->method('getOption')->willReturn(null);
-
-        try {
-            $content = $command->getContent('TestChannel', $args, $io);
-            $this->assertNotEmpty($content);
-            $this->assertIsString($content);
-            $this->assertStringContainsString('TestChannel', $content);
-        } catch (MissingTemplateException $missingTemplateException) {
-            $this->markTestSkipped('Template not available in test environment: ' . $missingTemplateException->getMessage());
-        }
-    }
-
-    /**
-     * Test channel name suffix addition in execute method
+     * Test channel name suffix is added automatically
      *
      * @return void
      */
     public function testChannelSuffixAddition(): void
     {
-        $command = new ChannelCommand();
-        $command->plugin = 'Crustum/Broadcasting';
+        $this->exec('bake channel --force My');
 
-        $io = $this->createMock(ConsoleIo::class);
-        $io->method('createFile')->willReturn(true);
+        $this->assertExitCode(CommandInterface::CODE_SUCCESS);
+        $file = APP . 'Broadcasting/MyChannel.php';
+        $this->assertFileExists($file);
+        $contents = file_get_contents($file);
+        $this->assertIsString($contents);
+        $this->assertStringContainsString('class MyChannel', $contents);
+    }
 
-        $args = $this->createMock(Arguments::class);
-        $args->method('getArgumentAt')->with(0)->willReturn('Order');
+    /**
+     * Test execute with missing channel name returns error
+     *
+     * @return void
+     */
+    public function testMissingName(): void
+    {
+        $this->exec('bake channel');
 
-        $args->method('getOption')->willReturnCallback(function ($key): ?false {
-            if ($key === 'verbose') {
-                return false;
-            }
-
-            if ($key === 'force') {
-                return false;
-            }
-
-            return null;
-        });
-
-        try {
-            $content = $command->getContent('OrderChannel', $args, $io);
-            $this->assertNotEmpty($content);
-            if (is_string($content)) {
-                $this->assertStringContainsString('OrderChannel', $content);
-            }
-        } catch (MissingTemplateException $missingTemplateException) {
-            $this->markTestSkipped('Template not available in test environment: ' . $missingTemplateException->getMessage());
-        }
+        $this->assertExitCode(CommandInterface::CODE_ERROR);
     }
 
     /**
@@ -219,11 +119,8 @@ class ChannelCommandTest extends TestCase
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getChannelNameFromClass');
 
-        $result = $method->invoke($command, 'OrderChannel');
-        $this->assertEquals('order', $result);
-
-        $result = $method->invoke($command, 'UserNotificationChannel');
-        $this->assertEquals('user-notification', $result);
+        $this->assertEquals('order', $method->invoke($command, 'OrderChannel'));
+        $this->assertEquals('user-notification', $method->invoke($command, 'UserNotificationChannel'));
     }
 
     /**
@@ -239,8 +136,7 @@ class ChannelCommandTest extends TestCase
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getUserModel');
 
-        $result = $method->invoke($command);
-        $this->assertEquals('User', $result);
+        $this->assertEquals('User', $method->invoke($command));
     }
 
     /**
@@ -256,8 +152,7 @@ class ChannelCommandTest extends TestCase
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getUserModel');
 
-        $result = $method->invoke($command);
-        $this->assertEquals('CustomUser', $result);
+        $this->assertEquals('CustomUser', $method->invoke($command));
 
         Configure::delete('Broadcasting.user_model');
     }
@@ -275,8 +170,7 @@ class ChannelCommandTest extends TestCase
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getNamespacedUserModel');
 
-        $result = $method->invoke($command);
-        $this->assertEquals(User::class, $result);
+        $this->assertEquals(User::class, $method->invoke($command));
     }
 
     /**
@@ -292,8 +186,7 @@ class ChannelCommandTest extends TestCase
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getNamespacedUserModel');
 
-        $result = $method->invoke($command);
-        $this->assertEquals('App\Model\Entity\CustomUser', $result);
+        $this->assertEquals('App\Model\Entity\CustomUser', $method->invoke($command));
 
         Configure::delete('Broadcasting.user_model');
     }

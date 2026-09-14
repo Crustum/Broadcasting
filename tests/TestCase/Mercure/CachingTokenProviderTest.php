@@ -13,24 +13,12 @@ use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 class CachingTokenProviderTest extends TestCase
 {
     /**
-     * @return void
-     */
-    protected function skipIfMercureMissing(): void
-    {
-        if (!interface_exists(TokenProviderInterface::class)) {
-            $this->markTestSkipped('symfony/mercure is not installed.');
-        }
-    }
-
-    /**
      * Mints once while the token is fresh.
      *
      * @return void
      */
     public function testItMintsOnceWhileTheTokenIsFresh(): void
     {
-        $this->skipIfMercureMissing();
-
         $provider = new CachingTokenProvider(
             new CountingTokenProvider($this->tokenWithClaims(['exp' => time() + 3600])),
         );
@@ -48,8 +36,6 @@ class CachingTokenProviderTest extends TestCase
      */
     public function testItReMintsOnceTheTokenNearsItsExpiry(): void
     {
-        $this->skipIfMercureMissing();
-
         $inner = new CountingTokenProvider($this->tokenWithClaims(['exp' => time() + 10]));
         $provider = new CachingTokenProvider($inner, 30);
 
@@ -66,8 +52,6 @@ class CachingTokenProviderTest extends TestCase
      */
     public function testATokenWithoutExpIsCachedForever(): void
     {
-        $this->skipIfMercureMissing();
-
         $inner = new CountingTokenProvider($this->tokenWithClaims(['sub' => 'app']));
         $provider = new CachingTokenProvider($inner);
 

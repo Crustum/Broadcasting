@@ -588,4 +588,147 @@ class MercureBroadcasterTest extends TestCase
             $broadcaster->topic('orders/1'),
         );
     }
+
+    /**
+     * Bulk broadcast with empty array does nothing.
+     *
+     * @return void
+     */
+    public function testBulkBroadcastEmptyArrayDoesNothing(): void
+    {
+        $this->broadcaster()->bulkBroadcast([]);
+
+        $this->assertCount(0, $this->published);
+    }
+
+    /**
+     * Bulk broadcast groups public channels with same payload into one publish.
+     *
+     * @return void
+     */
+    public function testBulkBroadcastGroupsPublicChannelsByPayload(): void
+    {
+        $broadcaster = $this->broadcaster();
+        $broadcaster->bulkBroadcast([
+            ['channel' => 'public-a', 'event' => 'Tick', 'data' => ['n' => 1]],
+            ['channel' => 'public-b', 'event' => 'Tick', 'data' => ['n' => 1]],
+            ['channel' => 'public-c', 'event' => 'Tick', 'data' => ['n' => 1]],
+        ]);
+
+        $this->assertCount(1, $this->published);
+        $update = $this->published[0];
+        $this->assertFalse($update->isPrivate());
+        $this->assertCount(3, $update->getTopics());
+        $this->assertContains($broadcaster->topic('public-a'), $update->getTopics());
+        $this->assertContains($broadcaster->topic('public-b'), $update->getTopics());
+        $this->assertContains($broadcaster->topic('public-c'), $update->getTopics());
+    }
+
+    /**
+     * Bulk broadcast groups private channels with same payload into one private publish.
+     *
+     * @return void
+     */
+    public function testBulkBroadcastGroupsPrivateChannelsByPayload(): void
+    {
+        $broadcaster = $this->broadcaster();
+        $broadcaster->bulkBroadcast([
+            ['channel' => 'private-a', 'event' => 'Tick', 'data' => ['n' => 1]],
+            ['channel' => 'private-b', 'event' => 'Tick', 'data' => ['n' => 1]],
+        ]);
+
+        $this->assertCount(1, $this->published);
+        $update = $this->published[0];
+        $this->assertTrue($update->isPrivate());
+        $this->assertCount(2, $update->getTopics());
+    }
+
+    /**
+     * Bulk broadcast sends separate publishes for different payloads.
+     *
+     * @return void
+     */
+    public function testBulkBroadcastSeparatesDifferentPayloads(): void
+    {
+        $broadcaster = $this->broadcaster();
+        $broadcaster->bulkBroadcast([
+            ['channel' => 'public-a', 'event' => 'Tick', 'data' => ['n' => 1]],
+            ['channel' => 'public-b', 'event' => 'Tick', 'data' => ['n' => 2]],
+        ]);
+
+        $this->assertCount(2, $this->published);
+        $this->assertSame(
+            [$broadcaster->topic('public-a')],
+            $this->published[0]->getTopics(),
+        );
+        $this->assertSame(
+            [$broadcaster->topic('public-b')],
+            $this->published[1]->getTopics(),
+        );
+    }
+
+    /**
+     * Bulk broadcast respects chunk size, splitting topics across publishes.
+     *
+     * @return void
+     */
+    public function testBulkBroadcastRespectsChunkSize(): void
+    {
+        $broadcaster = $this->broadcaster();
+        $channels = array_map(fn($i): string => "public-{$i}", range(1, 5));
+        $broadcasts = array_map(
+            fn($ch): array => ['channel' => $ch, 'event' => 'Tick', 'data' => ['n' => 1]],
+            $channels,
+        );
+
+        $broadcaster->bulkBroadcast($broadcasts, 2);
+
+        $this->assertCount(3, $this->published);
+        $this->assertCount(2, $this->published[0]->getTopics());
+        $this->assertCount(2, $this->published[1]->getTopics());
+        $this->assertCount(1, $this->published[2]->getTopics());
+    }
+
+    /**
+     * Bulk broadcast sends encrypted channels individually.
+     *
+     * @return void
+     */
+    public function testBulkBroadcastSendsEncryptedChannelsIndividually(): void
+    {
+        if (!class_exists(JWEBuilder::class)) {
+            $this->markTestSkipped('web-token/jwt-library is not installed.');
+        }
+
+        $broadcaster = $this->broadcaster([
+            'encryption_key' => 'base64:' . base64_encode(random_bytes(32)),
+        ]);
+
+        $broadcaster->bulkBroadcast([
+            ['channel' => 'public-a', 'event' => 'Tick', 'data' => ['n' => 1]],
+            ['channel' => 'private-encrypted-a', 'event' => 'Tick', 'data' => ['n' => 1]],
+        ]);
+
+        $this->assertCount(2, $this->published);
+        $this->assertFalse($this->published[0]->isPrivate());
+        $this->assertTrue($this->published[1]->isPrivate());
+    }
+
+    /**
+     * Bulk broadcast mixed public and private with same payload creates two publishes.
+     *
+     * @return void
+     */
+    public function testBulkBroadcastMixedPublicPrivateSeparatesByPrivacy(): void
+    {
+        $broadcaster = $this->broadcaster();
+        $broadcaster->bulkBroadcast([
+            ['channel' => 'public-a', 'event' => 'Tick', 'data' => ['n' => 1]],
+            ['channel' => 'private-a', 'event' => 'Tick', 'data' => ['n' => 1]],
+        ]);
+
+        $this->assertCount(2, $this->published);
+        $this->assertFalse($this->published[0]->isPrivate());
+        $this->assertTrue($this->published[1]->isPrivate());
+    }
 }

@@ -9,7 +9,6 @@ use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Mercure\MercureHubFactory;
 use InvalidArgumentException;
 use Jose\Component\Encryption\JWEBuilder;
-use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 
 /**
@@ -17,16 +16,6 @@ use Symfony\Component\Mercure\HubInterface;
  */
 class MercureHubFactoryTest extends TestCase
 {
-    /**
-     * @return void
-     */
-    protected function skipIfMercureMissing(): void
-    {
-        if (!interface_exists(HubInterface::class)) {
-            $this->markTestSkipped('symfony/mercure is not installed.');
-        }
-    }
-
     /**
      * @return void
      */
@@ -57,8 +46,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureRequiresASecret(): void
     {
-        $this->skipIfMercureMissing();
-
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('"secret"');
 
@@ -70,8 +57,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureRejectsAShortHmacSecret(): void
     {
-        $this->skipIfMercureMissing();
-
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('at least 32 bytes');
 
@@ -83,8 +68,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureRejectsANegativePublishExpiration(): void
     {
-        $this->skipIfMercureMissing();
-
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('publish_expiration');
 
@@ -96,8 +79,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureRejectsAPublishExpirationTruncatingToZeroSeconds(): void
     {
-        $this->skipIfMercureMissing();
-
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('publish_expiration');
 
@@ -109,8 +90,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureAcceptsASubMinutePublishExpiration(): void
     {
-        $this->skipIfMercureMissing();
-
         /** @var \Symfony\Component\Mercure\Hub $hub */
         $hub = MercureHubFactory::hub($this->mercureConfig(['publish_expiration' => 0.5]));
 
@@ -144,8 +123,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureRejectsAMalformedEncryptionKey(): void
     {
-        $this->skipIfJoseMissing();
-
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('encryption_key');
 
@@ -157,8 +134,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureRejectsASecurePrefixedCookieOverAPlainHttpPublicUrl(): void
     {
-        $this->skipIfMercureMissing();
-
         $hub = MercureHubFactory::hub($this->mercureConfig([
             'public_url' => 'http://localhost/.well-known/mercure',
         ]));
@@ -174,8 +149,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureAcceptsAPlainHttpPublicUrlWithAnUnprefixedCookieName(): void
     {
-        $this->skipIfMercureMissing();
-
         $hub = MercureHubFactory::hub($this->mercureConfig([
             'public_url' => 'http://localhost/.well-known/mercure',
             'cookie_name' => 'mercureAuthorization',
@@ -191,9 +164,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureAcceptsABase64PrefixedEncryptionKey(): void
     {
-        $this->skipIfMercureMissing();
-        $this->skipIfJoseMissing();
-
         $broadcaster = new MercureBroadcaster($this->mercureConfig([
             'encryption_key' => 'base64:' . base64_encode(random_bytes(32)),
         ]));
@@ -206,8 +176,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureSideSpecificSecretsTakePrecedence(): void
     {
-        $this->skipIfMercureMissing();
-
         /** @var \Symfony\Component\Mercure\Hub $hub */
         $hub = MercureHubFactory::hub($this->mercureConfig([
             'subscribe_secret' => str_repeat('a', 32),
@@ -225,8 +193,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureDefaultsTheRfc9068Claims(): void
     {
-        $this->skipIfMercureMissing();
-
         /** @var \Symfony\Component\Mercure\Hub $hub */
         $hub = MercureHubFactory::hub($this->mercureConfig());
 
@@ -250,8 +216,6 @@ class MercureHubFactoryTest extends TestCase
      */
     public function testMercureExplicitClaimsWinOverTheDefaults(): void
     {
-        $this->skipIfMercureMissing();
-
         /** @var \Symfony\Component\Mercure\Hub $hub */
         $hub = MercureHubFactory::hub($this->mercureConfig([
             'claims' => [

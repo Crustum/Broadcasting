@@ -206,9 +206,18 @@ class MercureBroadcaster extends BaseBroadcaster
                 ? null
                 : $this->updateData(null, $event, $payload, $socket);
 
-            $encrypter = $this->encrypter();
-            assert($encrypter instanceof ChannelEncrypter);
             foreach ($encryptedChannels as $channel) {
+                $encrypter = $this->encrypter();
+                if (!$encrypter instanceof ChannelEncrypter) {
+                    throw new BroadcastingException(
+                        sprintf(
+                            'Mercure broadcasting requires an "encryption_key" configuration value to broadcast on the end-to-end encrypted channel [%s].',
+                            $channel,
+                        ),
+                        500,
+                    );
+                }
+
                 $this->hub->publish(new Update(
                     [$this->topic($channel)],
                     json_encode([
@@ -236,6 +245,92 @@ class MercureBroadcaster extends BaseBroadcaster
                 $throwable,
             );
         }
+    }
+
+    /**
+     * Broadcast multiple personalized messages, grouping items that share
+     * the same payload into a single Mercure publish with multiple topics.
+     *
+     * The Mercure spec allows multiple `topic` parameters per POST, so items
+     * with identical event + data + privacy are merged into one Update.
+     * Encrypted channels are published individually (each needs its own JWE).
+     *
+     * @param array<mixed> $broadcasts Event objects or flat broadcast specs
+     * @param int $chunkSize Max topics per publish request (default 100)
+     * @return void
+     */
+    public function bulkBroadcast(array $broadcasts, int $chunkSize = 100): void
+    {
+        $normalized = $this->normalizeBulkBroadcasts($broadcasts);
+        if ($normalized === []) {
+            return;
+        }
+
+        $chunkSize = max(1, $chunkSize);
+
+        $publicGroups = [];
+        $privateGroups = [];
+        $encryptedItems = [];
+
+        foreach ($normalized as $item) {
+            $channel = $item['channel'];
+            $payload = $item['data'];
+
+            if ($this->isEncryptedChannel($channel)) {
+                $encryptedItems[] = $item;
+                continue;
+            }
+
+            $groupKey = $item['event'] . "\0" . json_encode($payload, JSON_THROW_ON_ERROR);
+            if ($this->isGuardedChannel($channel)) {
+                $privateGroups[$groupKey][] = $channel;
+            } else {
+                $publicGroups[$groupKey][] = $channel;
+            }
+        }
+
+        foreach ($publicGroups as $groupKey => $channels) {
+            $envelope = $this->buildBulkEnvelope($groupKey, $channels);
+            foreach (array_chunk($channels, $chunkSize) as $chunk) {
+                $this->hub->publish(new Update(
+                    array_map($this->topic(...), $chunk),
+                    $envelope,
+                    false,
+                ));
+            }
+        }
+
+        foreach ($privateGroups as $groupKey => $channels) {
+            $envelope = $this->buildBulkEnvelope($groupKey, $channels);
+            foreach (array_chunk($channels, $chunkSize) as $chunk) {
+                $this->hub->publish(new Update(
+                    array_map($this->topic(...), $chunk),
+                    $envelope,
+                    true,
+                ));
+            }
+        }
+
+        foreach ($encryptedItems as $item) {
+            $this->broadcast([$item['channel']], $item['event'], $item['data']);
+        }
+    }
+
+    /**
+     * Build the update envelope from a bulk group key and channel list.
+     *
+     * @param string $groupKey event \0 payload_json \0 socket
+     * @param array<string> $channels Channel names
+     * @return string JSON-encoded update envelope
+     */
+    private function buildBulkEnvelope(string $groupKey, array $channels): string
+    {
+        $nullPos = strpos($groupKey, "\0");
+        assert($nullPos !== false);
+        $event = substr($groupKey, 0, $nullPos);
+        $payload = json_decode(substr($groupKey, $nullPos + 1), true, 512, JSON_THROW_ON_ERROR);
+
+        return $this->updateData($channels, $event, $payload, null);
     }
 
     /**
