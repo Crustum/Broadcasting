@@ -1,0 +1,55 @@
+# Crustum Broadcasting
+
+Prefer package docs and the `broadcasting-development` skill for orientation.
+
+@scoped(['config/broadcasting.php', 'config/bootstrap.php'])
+## Broadcasting config
+- Keep driver credentials and `options.host` / `port` / `path` / `scheme` aligned with the WebSocket server (or SaaS Pusher).
+- Prefer `BroadcastingTrait` in tests when asserting sends; Null driver disables real delivery.
+- Load `config/broadcasting.php` from bootstrap after manifest install.
+@endscoped
+
+@scoped(['config/channels.php'])
+## Channel authorization registry
+- Register private/presence auth with `Broadcasting::channel(...)` (closure or channel class).
+- Public channels need no callback; missing private/presence registrations fail at `/broadcasting/auth`.
+- Wildcards (e.g. `{order}`) bind to callback / `join()` args. Presence: return `false` or a member data array.
+@endscoped
+
+@scoped(['src/Broadcasting/**', 'src/**/*Channel.php'])
+## Channel classes
+- Prefer `{{ assist.cakeCommand('bake channel Order') }}` — implement `ChannelInterface::join(...)`.
+- Register the class in `config/channels.php`; keep auth logic in the class.
+@endscoped
+
+@scoped(['config/routes.php'])
+## Broadcasting auth routes
+- Default endpoints: `/broadcasting/auth` and `/broadcasting/user-auth` (plugin routes).
+- If plugin routes are off, register them explicitly or Echo private/presence joins 404.
+- Allow CSRF for SPA auth POSTs per Broadcasting docs (one-time Application / middleware setup).
+@endscoped
+
+@scoped(['src/Event/**', 'src/**/*Broadcast*.php'])
+## Broadcast events
+- Implement `BroadcastableInterface` (`broadcastChannel`, `broadcastEvent`, `broadcastData`, `broadcastSocket`).
+- Fire with `broadcast($event)` or Broadcasting helpers; use `toOthers()` to exclude the current socket.
+- Queued broadcasts need a running queue worker.
+@endscoped
+
+@scoped(['src/Model/Table/**'])
+## Model broadcasting
+- Use model `BroadcastingTrait` + `BroadcastingTraitInterface` and behavior `Crustum/Broadcasting.Broadcasting` together.
+- Configure channels/payload via setters or behavior config; disable when tests must not emit.
+@endscoped
+
+@scoped(['tests/**/*Broadcast*', 'tests/TestCase/**/*Broadcast*'])
+## Broadcasting tests
+- Use `Crustum\Broadcasting\TestSuite\BroadcastingTrait` to capture sends.
+- Assert with `assertBroadcastSent`, `assertBroadcastSentToChannel`, payload/queued helpers from the trait.
+@endscoped
+
+@scoped(['webroot/js/**', 'resources/**/*.js', 'assets/**/*.js'])
+## Echo client
+- Auth endpoint: `/broadcasting/auth`.
+- Match Echo key / host / port / path / TLS to Broadcasting options and the WS server.
+@endscoped

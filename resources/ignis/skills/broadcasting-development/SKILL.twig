@@ -1,0 +1,92 @@
+---
+name: broadcasting-development
+description: "CakePHP event broadcasting (crustum/broadcasting): drivers, channels.php auth, BroadcastableInterface events, toOthers(), model broadcasting, Echo clients, BroadcastingTrait test asserts. For BlazeCast/WebSocket server setup use the blazecast-development skill. Activates when installing Broadcasting; defining broadcast events; authorizing private/presence channels; model broadcasts; or asserting broadcasts in tests."
+license: MIT
+metadata:
+  author: crustum
+---
+# CakePHP Broadcasting
+
+## Documentation First
+
+Prefer Broadcasting docs (`docs/index.md`). When configuring the WebSocket server, Echo `wsHost`/`wsPort`/`wsPath`, or BlazeCast app id/key/secret, also follow BlazeCast docs and the `blazecast-development` skill.
+
+## Installation
+
+```bash
+composer require crustum/broadcasting
+```
+
+```bash
+{{ assist.cakeCommand('plugin load Crustum/Broadcasting') }}
+{{ assist.cakeCommand('manifest install --plugin Crustum/Broadcasting') }}
+```
+
+Creates `config/broadcasting.php` and `config/channels.php`, copies migrations if needed, and appends config load in bootstrap.
+
+## Drivers
+
+Default connection uses `Crustum/Broadcasting.Pusher` with `key` / `secret` / `app_id`. For self-hosted Pusher protocol, set `options.host` / `port` / `path` / `scheme` to the running BlazeCast (or other) server and keep credentials aligned with that server’s apps. Also available: Redis, Log, Null (Null avoids real sends when not using the test trait).
+
+## Defining Broadcast Events
+
+Implement `Crustum\Broadcasting\Event\BroadcastableInterface`:
+
+- `broadcastChannel()` — `Channel`, `PrivateChannel`, `PresenceChannel`, or array
+- `broadcastEvent()` — name Echo listens for
+- `broadcastData()` — payload array (or null)
+- `broadcastSocket()` — optional socket id exclusion
+
+Fire with `broadcast(new ServerCreated($user))` (`use function Crustum\Broadcasting\broadcast`).
+
+Optional `QueueableInterface` for `broadcastQueue()` / queue connection. Conditions via docs (`broadcastWhen`-style APIs). Prefer docs for queue adapter details.
+
+## Authorizing Channels
+
+Register callbacks (or channel classes) in `config/channels.php` with `Broadcasting::channel(...)`. Private/presence require auth; public does not.
+
+Plugin routes: `/broadcasting/auth` (and `/broadcasting/user-auth`). CSRF: follow docs so SPA auth posts succeed. Presence auth returns member data for the join payload.
+
+## Broadcasting Events
+
+- Facade/helpers: `Broadcasting::to(...)->event(...)->data(...)->send()` and `broadcast($event)`
+- `toOthers()` — exclude current socket (`X-Socket-ID` / Echo socket id)
+- Connection override when multiple broadcasters are configured
+- Anonymous events without a dedicated event class — see docs
+
+## Model Broadcasting
+
+On the Table: implement `BroadcastingTraitInterface`, use `Model\Trait\BroadcastingTrait`, add behavior `Crustum/Broadcasting.Broadcasting` with event map (`Model.afterSave` → `saved`, etc.). Configure channels/payload via `setBroadcastChannels` / `setBroadcastPayload` (or behavior config). Disable with table helpers when tests must not emit model broadcasts.
+
+## Client (Echo)
+
+Auth endpoint: `/broadcasting/auth`. Match Echo `key`, `wsHost`, `wsPort`, `wssPort`, `wsPath`, and TLS flags to the Broadcasting driver options and the WebSocket server. Listen/leave/presence join APIs are in Broadcasting docs + Echo docs.
+
+## Notifications over Broadcast
+
+For `via()` broadcast notifications install `crustum/notification-broadcasting` and follow that package’s docs / `broadcasting-notification-development` skill.
+
+## Testing
+
+Use `Crustum\Broadcasting\TestSuite\BroadcastingTrait` on the test case. It swaps in `TestBroadcaster` / `TestQueueAdapter` so broadcasts are captured instead of sent.
+
+Primary asserts (see docs Testing / Available Assertions):
+
+- `assertBroadcastSent` / `assertBroadcastNotSent` / `assertNoBroadcastsSent`
+- `assertBroadcastSentTimes` / `assertBroadcastCount`
+- `assertBroadcastSentToChannel` / `assertBroadcastSentToChannels` / `assertBroadcastNotSentToChannel`
+- `assertBroadcastPayloadContains` / `assertBroadcastPayloadEquals`
+- `assertBroadcastSentViaConnection`
+- `assertBroadcastExcludedSocket`
+- `assertBroadcastQueued` / `assertBroadcastQueuedToChannel` / `assertNoBroadcastsQueued` / `assertBroadcastQueuedCount`
+
+Helpers: `getBroadcastsByEvent(...)` for raw captured payloads. Full examples live in `docs/index.md` § Testing.
+
+## Common Pitfalls
+
+- Private/presence channels without `config/channels.php` auth callbacks.
+- Queued broadcasts without a running queue worker.
+- Echo `wsHost` / port / `wsPath` / key out of sync with Broadcasting driver options or the WebSocket server.
+- App id/key/secret mismatch between Broadcasting config and the WS server applications.
+- Tests that hit a real driver — use `BroadcastingTrait` (or Null) so broadcasts are captured/disabled.
+- Model broadcasting without both the model trait/interface and the `Broadcasting` behavior.
