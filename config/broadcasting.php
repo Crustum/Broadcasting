@@ -125,6 +125,25 @@ return [
                 'className' => 'Crustum/Broadcasting.Redis',
                 'connection' => env('BROADCASTING_REDIS_CONNECTION', 'default'),
             ],
+
+            /**
+             * Mercure driver for Server-Sent Events broadcasting.
+             *
+             * Requires `symfony/mercure`; encrypted channels additionally
+             * require `web-token/jwt-library`. See
+             * `Crustum\Broadcasting\Mercure\MercureHubFactory` for options.
+             */
+            'mercure' => [
+                'className' => 'Crustum/Broadcasting.Mercure',
+                'url' => env('MERCURE_URL'),
+                'public_url' => env('MERCURE_PUBLIC_URL'),
+                'secret' => env('MERCURE_JWT_SECRET'),
+                'encryption_key' => env('MERCURE_ENCRYPTION_KEY'),
+                'claims' => [
+                    'iss' => env('MERCURE_JWT_ISSUER'),
+                ],
+                'subscribe_expiration' => (int)env('MERCURE_SUBSCRIBE_EXPIRATION', 5),
+            ],
         ],
 
         /**
