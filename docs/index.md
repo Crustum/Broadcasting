@@ -6,9 +6,11 @@
     - [Pusher Channels](#pusher-channels)
     - [Redis](#redis)
     - [Log Driver](#log-driver)
+    - [Mercure](#mercure)
 - [Client Side Installation](#client-side-installation)
     - [Laravel Echo](#laravel-echo)
     - [Pusher Channels](#client-pusher-channels)
+    - [Mercure (EventSource)](#mercure-eventsource)
 - [Concept Overview](#concept-overview)
     - [Using an Example Application](#using-example-application)
 - [Defining Broadcast Events](#defining-broadcast-events)
@@ -21,6 +23,7 @@
     - [Defining Authorization Callbacks](#defining-authorization-callbacks)
     - [Channel Authorization Routes](#channel-authorization-routes)
     - [CSRF and Channel Authorization](#csrf-and-channel-authorization)
+    - [Encrypted Channels](#encrypted-channels)
 - [Broadcasting Events](#broadcasting-events)
     - [Only to Others](#only-to-others)
     - [Customizing the Connection](#customizing-the-connection)
@@ -65,7 +68,7 @@ The core concepts behind broadcasting are simple: clients connect to named chann
 <a name="supported-drivers"></a>
 #### Supported Drivers
 
-By default, CakePHP includes four server-side broadcasting drivers for you to choose from: [Pusher Channels](https://pusher.com/channels), Redis, Log, and Null.
+By default, CakePHP includes four server-side broadcasting drivers for you to choose from: [Pusher Channels](https://pusher.com/channels), Redis, Log, and Null. An optional [Mercure](#mercure) driver is also available for Server-Sent Events broadcasting.
 
 <a name="quickstart"></a>
 ## Quickstart
@@ -214,6 +217,70 @@ When the Redis broadcaster publishes an event, it will be published on the event
 
 The `log` broadcaster is primarily used for development and debugging. Instead of broadcasting events to a real-time service, it will log all broadcast events to your application's log files. This is useful for testing your broadcasting logic without setting up external services.
 
+<a name="mercure"></a>
+### Mercure
+
+The [Mercure](https://mercure.rocks/) driver broadcasts updates as Server-Sent Events through a Mercure hub. Every joined topic is multiplexed over one `EventSource` connection guarded by a single authorization cookie, so a single subscriber token covers all currently joined channels.
+
+Install the required packages:
+
+```bash
+composer require symfony/mercure
+```
+
+For end-to-end encrypted channels, also install the JWT library:
+
+```bash
+composer require web-token/jwt-library
+```
+
+Configure the Mercure connection in `config/broadcasting.php`:
+
+```php
+'mercure' => [
+    'className' => 'Crustum/Broadcasting.Mercure',
+    'url' => env('MERCURE_URL'),
+    'public_url' => env('MERCURE_PUBLIC_URL'),
+    'secret' => env('MERCURE_JWT_SECRET'),
+    'encryption_key' => env('MERCURE_ENCRYPTION_KEY'),
+    'claims' => [
+        'iss' => env('MERCURE_JWT_ISSUER'),
+    ],
+    'subscribe_expiration' => (int)env('MERCURE_SUBSCRIBE_EXPIRATION', 5),
+],
+```
+
+Set the environment variables in your `.env` file:
+
+```ini
+MERCURE_URL="https://hub.example.com/.well-known/mercure"
+MERCURE_PUBLIC_URL="https://hub.example.com/.well-known/mercure"
+MERCURE_JWT_SECRET="your-jwt-secret-at-least-32-bytes-long"
+MERCURE_ENCRYPTION_KEY="base64:your-base64-encoded-32-byte-key"
+MERCURE_JWT_ISSUER="https://your-app.example.com"
+MERCURE_SUBSCRIBE_EXPIRATION=5
+```
+
+When `url` is empty and the application runs on FrankenPHP with its built-in Mercure hub enabled, the driver falls back to the FrankenPHP hub automatically.
+
+#### Mercure Configuration Options
+
+| Key | Description |
+|-----|-------------|
+| `url` | Mercure hub URL (publish endpoint). Leave empty for FrankenPHP built-in hub. |
+| `public_url` | Public URL of the hub used for cookie domain validation. Defaults to `url`. |
+| `secret` | Shared secret for signing subscriber JWTs (HMAC). At least 32 bytes for HS256. |
+| `subscribe_secret` | Override the subscriber-side secret (takes precedence over `secret`). |
+| `publish_secret` | Override the publish-side secret (takes precedence over `secret`). |
+| `encryption_key` | Base64-encoded 32-byte key for end-to-end encrypted channels. |
+| `claims` | Additional JWT claims (`iss`, `aud`, `client_id`). |
+| `subscribe_expiration` | Subscriber token lifetime in minutes (default: `5`). |
+| `publish_expiration` | Publish token lifetime in minutes (default: hub default). |
+| `cookie_name` | Custom authorization cookie name. Must not use `__Secure-` or `__Host-` prefix over plain HTTP. |
+| `topic_prefix` | Prefix for Mercure topics (default: `https://crustum.cake/echo/`). |
+| `client_events` | Enable client events / whisper topics (default: `true`). |
+| `client_options` | Symfony HTTP client options passed to the hub's HTTP client. |
+
 <a name="client-side-installation"></a>
 ## Client Side Installation
 
@@ -263,6 +330,53 @@ MIX_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 ```
 
 Once you have adjusted the Echo configuration according to your application's needs, you may compile your application's assets.
+
+<a name="mercure-eventsource"></a>
+#### Mercure (EventSource)
+
+When using the Mercure driver, the client connects via the browser's native `EventSource` API. Laravel Echo does not ship a Mercure broadcaster, so you subscribe to topics manually:
+
+```js
+const hubUrl = 'https://hub.example.com/.well-known/mercure';
+const topicPrefix = 'https://crustum.cake/echo/';
+
+// Fetch the authorization cookie first (POST to /broadcasting/auth)
+const authResponse = await fetch('/broadcasting/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ 'channel_names[]': 'private-orders.1' }),
+    credentials: 'same-origin',
+});
+
+// The hub sets the mercureAuthorization cookie from the response.
+// Open the EventSource with the authorized topics:
+const url = new URL(hubUrl);
+url.searchParams.append('topic', topicPrefix + 'channel/' + encodeURIComponent('private-orders.1'));
+
+const es = new EventSource(url, { withCredentials: true });
+es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    console.log(data.event, data.payload);
+};
+```
+
+For client events (whisper), the subscriber publishes to the whisper topic:
+
+```js
+// Publish a client event via POST to the Mercure hub
+const whisperTopic = topicPrefix + 'whisper/' + encodeURIComponent('private-orders.1');
+await fetch(hubUrl, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Bearer <publish-jwt>',
+    },
+    body: new URLSearchParams({
+        'topic': whisperTopic,
+        'data': JSON.stringify({ event: 'typing', payload: { user: 'Ada' } }),
+    }),
+});
+```
 
 <a name="concept-overview"></a>
 ## Concept Overview
@@ -513,6 +627,30 @@ class ServerCreated implements BroadcastableInterface, QueueableInterface
 }
 ```
 
+<a name="delete-when-missing-models"></a>
+#### Delete When Missing Models
+
+By default, broadcast jobs are deleted when the models referenced in the event payload are no longer found (e.g., the entity was deleted between dispatch and processing). You may disable this behavior by setting `$deleteWhenMissingModels` to `false` on your event class, which causes the job to be requeued instead of discarded:
+
+```php
+use Crustum\Broadcasting\Event\BroadcastableInterface;
+use Crustum\Broadcasting\Event\QueueableInterface;
+
+class OrderShipped implements BroadcastableInterface, QueueableInterface
+{
+    public bool $deleteWhenMissingModels = false;
+
+    public function broadcastChannel(): Channel|array
+    {
+        return new PrivateChannel('orders.' . $this->order->id);
+    }
+
+    // ...
+}
+```
+
+When `true` (the default), the job is deleted on missing models. When `false`, it is requeued for later processing.
+
 <a name="broadcast-conditions"></a>
 ### Broadcast Conditions
 
@@ -751,6 +889,51 @@ Skipping CSRF on these endpoints matches the usual realtime stack. Authorization
 2. Channel callbacks (or channel classes) in `config/channels.php`
 3. For WebSocket Origin / CORS on the realtime server — configure the server (for example BlazeCast `allowed_origins`), not CSRF middleware
 
+<a name="encrypted-channels"></a>
+### Encrypted Channels
+
+Encrypted channels provide end-to-end encryption for private channel updates through the Mercure driver. When a channel uses the `private-encrypted-` prefix, its payload is encrypted on the server before publishing and decrypted by the subscriber using a JSON Web Key (JWK) exchanged during authorization.
+
+> [!NOTE]
+> Encrypted channels require `web-token/jwt-library` and an `encryption_key` configuration value.
+
+Use `EncryptedPrivateChannel` in your event:
+
+```php
+use Crustum\Broadcasting\Channel\EncryptedPrivateChannel;
+
+public function broadcastChannel(): Channel|array
+{
+    return new EncryptedPrivateChannel('orders.' . $this->order->id);
+}
+```
+
+During authorization (`/broadcasting/auth`), the response for an encrypted channel includes the JWK the subscriber needs to decrypt updates:
+
+```json
+{
+    "channel_names": [
+        {
+            "name": "private-encrypted-orders.1",
+            "jwk": {
+                "kty": "oct",
+                "k": "base64-encoded-key",
+                "alg": "dir",
+                "enc": "A256GCM"
+            }
+        }
+    ]
+}
+```
+
+The `encryption_key` must be a base64-encoded 32-byte key. Generate one with:
+
+```bash
+php -r "echo base64_encode(random_bytes(32));"
+```
+
+Do **not** route the hub's authorization cookie through encrypted-cookie middleware: encrypting the raw JWT produces a value the hub can never verify.
+
 <a name="broadcasting-events"></a>
 ## Broadcasting Events
 
@@ -882,13 +1065,23 @@ Broadcasting::to('orders.' . $order->id)
 
 Use `Broadcasting::bulk()` when each recipient needs a **different** payload (or event). Same-event fan-out to many channels already uses a single `trigger()` call; bulk is for personalized messages.
 
-- **Pusher:** `triggerBatch` (default chunk **100**, configurable via `bulk.max_batch_size`)
-- **Redis:** one Lua `eval` with channel/message pairs per chunk
-- **Log:** one summary `Log::info` for the whole batch (not N lines)
+Each broadcaster driver implements `bulkBroadcast()` with driver-specific optimizations:
+
+| Driver | Strategy | Batch limit |
+|--------|----------|-------------|
+| Pusher | `triggerBatch` API | Configurable via `bulk.max_batch_size` (default 100) |
+| Redis | One Lua `eval` with channel/message pairs | Configurable via `bulk.max_batch_size` (default 100) |
+| Mercure | Groups items by payload into multi-topic publishes | Configurable via chunk size (default 100) |
+| Log | Single summary `Log::info` line | Unlimited |
+
+#### Synchronous bulk
+
+Pass an array of broadcastable event objects or flat specs `{channel, event, data, socket?}`:
 
 ```php
 use Crustum\Broadcasting\Broadcasting;
 
+// Using broadcastable event objects
 $events = [];
 foreach ($students as $student) {
     $events[] = new CourseProgressChangedEvent($course->id, $student->id, $student->progress);
@@ -896,6 +1089,7 @@ foreach ($students as $student) {
 
 Broadcasting::bulk($events);
 
+// Using flat specs
 Broadcasting::bulk([
     [
         'channel' => 'private-user.1',
@@ -910,7 +1104,15 @@ Broadcasting::bulk([
 ]);
 ```
 
-Queue large fan-outs with `queueBulk()`. Items are normalized to flat arrays before enqueue; each chunk becomes one `BulkBroadcastJob`:
+You may specify a connection and chunk size:
+
+```php
+Broadcasting::bulk($events, 'pusher', 50);
+```
+
+#### Queued bulk
+
+Queue large fan-outs with `queueBulk()`. Items are normalized to flat arrays before enqueue so workers do not need to unserialize application event classes. Each chunk becomes one `BulkBroadcastJob`:
 
 ```php
 Broadcasting::queueBulk($events, 'default', [
@@ -919,7 +1121,52 @@ Broadcasting::queueBulk($events, 'default', [
 ]);
 ```
 
-In tests, assert queued bulk jobs with `assertBulkBroadcastQueued()`, `assertBulkBroadcastQueuedCount()`, `assertBulkBroadcastQueuedEvent()`, and `assertBulkBroadcastQueuedToChannel()`.
+#### Driver details
+
+**Pusher** batches items into `triggerBatch` calls. Each chunk is sent as a single HTTP request to the Pusher API. The maximum batch size is capped by the `bulk.max_batch_size` connection config value:
+
+```php
+'pusher' => [
+    'className' => 'Crustum/Broadcasting.Pusher',
+    // ...
+    'bulk' => [
+        'max_batch_size' => 200,
+    ],
+],
+```
+
+**Redis** publishes all channel/message pairs in a single Lua `eval` call per chunk, minimizing round-trips. The Lua script iterates ARGV in pairs (channel, message) and calls `redis.call('publish', ...)` for each.
+
+**Log** writes each item individually via `logBroadcast()` and then a single summary line with the full batch JSON.
+
+**Mercure** groups items by event name and payload into multi-topic publishes. The Mercure spec allows multiple `topic` parameters per POST, so items with identical event and data collapse into a single HTTP request regardless of channel count. Public and guarded channels are published separately. Encrypted channels are published individually since each needs its own JWE.
+
+#### Testing bulk broadcasts
+
+In tests, the `BroadcastingTrait` captures bulk jobs in the `TestQueueAdapter`. Assert queued bulk jobs with:
+
+```php
+public function testBulkNotificationQueued(): void
+{
+    Broadcasting::queueBulk([
+        ['channel' => 'private-user.1', 'event' => 'Notify', 'data' => ['msg' => 'Hi']],
+        ['channel' => 'private-user.2', 'event' => 'Notify', 'data' => ['msg' => 'Hey']],
+    ]);
+
+    $this->assertBulkBroadcastQueued();
+    $this->assertBulkBroadcastQueuedCount(1);
+    $this->assertBulkBroadcastQueuedEvent('Notify');
+    $this->assertBulkBroadcastQueuedToChannel('private-user.1', 'Notify');
+}
+```
+
+Retrieve flattened items from queued bulk jobs:
+
+```php
+$items = $this->getQueuedBulkBroadcastItems();
+$this->assertCount(2, $items);
+$this->assertSame('private-user.1', $items[0]['channel']);
+```
 
 <a name="receiving-broadcasts"></a>
 ## Receiving Broadcasts

@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0]
+
+### Added
+
+- `MercureBroadcaster` for Server-Sent Events broadcasting through a Mercure hub with topic-based delivery, authorization cookie minting, and per-channel grants
+- `MercureHubFactory` for hub configuration, `CachingTokenProvider` for JWT caching, `ChannelEncrypter` for JWE payload encryption
+- End-to-end encrypted private channels (`private-encrypted-`) with JWK exchange during authorization
+- `deleteWhenMissingModels` flag on `BroadcastJob` to control requeue vs discard behavior when entities are missing
+- `EncryptedPrivateChannel` accepts `Channel` objects in addition to string names
+- `Broadcasting::bulk()` / `Broadcasting::queueBulk()` for personalized multi-channel fan-out; `BulkBroadcastJob` for chunked queue processing
+- `BroadcasterInterface::bulkBroadcast()` with shared normalize helpers on `BaseBroadcaster`; `PusherBroadcaster` uses `triggerBatch` (default chunk 100, configurable via `bulk.max_batch_size`)
+- `RedisBroadcaster::bulkBroadcast()` publishes personalized channel/message pairs in one Lua `eval` per chunk
+- `LogBroadcaster::bulkBroadcast()` writes a single summary log line for the batch
+- TestSuite helpers for bulk queue assertions (`assertBulkBroadcastQueued*`, `getQueuedBulkBroadcastJobs` / `Items`)
+- Composer `suggest` section declaring optional Mercure and hash dependencies
+
+### Changed
+
+- Exclude tooling files from Composer dist archives
+
+### Removed
+
+- Obsolete rector rules
+
+### Documentation
+
+- Document Mercure driver installation, configuration, and client-side EventSource setup
+- Document end-to-end encrypted private channels with JWK exchange
+- Document `deleteWhenMissingModels` flag on broadcast jobs
+
+## [1.3.0]
+
+### Added
+
+- Event hooks for enriching broadcast payloads via `BroadcastableInterface::broadcastWith()` callback
+
 ## [1.2.1]
 
 ### Added
