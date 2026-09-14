@@ -20,9 +20,34 @@ use Interop\Queue\Processor as InteropProcessor;
 class BroadcastJob implements JobInterface
 {
     /**
+     * Whether the job should be deleted when models are missing.
+     *
+     * Defaults to `true`. Broadcast jobs carry flat payloads, so this
+     * is a delete-vs-requeue hint for missing-entity payloads.
+     *
+     * @var bool
+     */
+    public bool $deleteWhenMissingModels = true;
+
+    /**
+     * Resolve the delete-when-missing flag for an event object.
+     *
+     * @param object $event Event object
+     * @return bool
+     */
+    public static function resolveDeleteWhenMissingModels(object $event): bool
+    {
+        if (property_exists($event, 'deleteWhenMissingModels')) {
+            return (bool)$event->deleteWhenMissingModels;
+        }
+
+        return true;
+    }
+
+    /**
      * Resolve a display name for custom job identification / unique locks.
      *
-     * Prefers the underlying event class when present (Laravel displayName parity).
+     * Prefers the underlying event class when present for stable job naming.
      *
      * @param array<string, mixed> $data Job payload
      * @return string

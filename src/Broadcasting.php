@@ -686,9 +686,7 @@ class Broadcasting
     public static function initFromConfigure(array $connections): void
     {
         foreach ($connections as $name => $config) {
-            if (!isset(static::$_config[$name])) {
-                static::$_config[$name] = $config;
-            }
+            static::$_config[$name] ??= $config;
         }
     }
 }

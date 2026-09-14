@@ -14,9 +14,6 @@ use Crustum\Broadcasting\TestSuite\TestBroadcaster;
 
 /**
  * Pending Broadcast Fluent Integration Test
- *
- * Fluent send API coverage adapted from Laravel AnonymousEvent suite.
- * Asserts via TestBroadcaster, not EventManager / AnonymousEvent.
  */
 class PendingBroadcastFluentIntegrationTest extends TestCase
 {

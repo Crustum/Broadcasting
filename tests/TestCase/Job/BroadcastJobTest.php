@@ -134,6 +134,37 @@ class BroadcastJobTest extends TestCase
     }
 
     /**
+     * Test deleteWhenMissingModels defaults to true
+     *
+     * @return void
+     */
+    public function testDeleteWhenMissingModelsDefaultsTrue(): void
+    {
+        $job = new BroadcastJob();
+
+        $this->assertTrue($job->deleteWhenMissingModels);
+        $this->assertTrue(BroadcastJob::resolveDeleteWhenMissingModels(new class {
+        }));
+    }
+
+    /**
+     * Test deleteWhenMissingModels can be disabled via event property
+     *
+     * @return void
+     */
+    public function testDeleteWhenMissingModelsCanBeDisabled(): void
+    {
+        $event = new class {
+            /**
+             * @var bool
+             */
+            public bool $deleteWhenMissingModels = false;
+        };
+
+        $this->assertFalse(BroadcastJob::resolveDeleteWhenMissingModels($event));
+    }
+
+    /**
      * Create a mock message
      *
      * @param array<string, mixed> $data Message data

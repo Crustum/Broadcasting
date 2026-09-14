@@ -7,8 +7,7 @@ namespace Crustum\Broadcasting\Job;
  * Unique Broadcast Job
  *
  * CakePHP Queue unique job for broadcast events. Relies on
- * `QueueManager` + `uniqueCache` config (`Job::$shouldBeUnique`), not a
- * Laravel-style ShouldBeUnique interface.
+ * `QueueManager` + `uniqueCache` config (`Job::$shouldBeUnique`).
  *
  * @package Crustum\Broadcasting\Job
  * @see \Cake\Queue\QueueManager::push()

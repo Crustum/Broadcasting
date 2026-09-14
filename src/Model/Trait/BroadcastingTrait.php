@@ -267,7 +267,7 @@ trait BroadcastingTrait
     }
 
     /**
-     * Convert entity instances to Laravel-style channel names
+     * Convert entity instances to dotted channel names
      *
      * @param array<mixed> $channels Array of channels or entities
      * @return array<string> Array of channel names

@@ -49,7 +49,7 @@ use LogicException;
  * ]);
  * ```
  *
- * The behavior automatically maps to Laravel event names:
+ * The behavior automatically maps model events to broadcast names:
  * - New entities (isNew() = true) → broadcast 'created' event
  * - Existing entities (isNew() = false) → broadcast 'updated' event
  * - Deleted entities → broadcast 'deleted' event
