@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Crustum\Broadcasting\Test\TestCase\Channel;
 
 use Cake\TestSuite\TestCase;
+use Crustum\Broadcasting\Channel\Channel;
 use Crustum\Broadcasting\Channel\EncryptedPrivateChannel;
 
 /**
@@ -112,6 +113,18 @@ class EncryptedPrivateChannelTest extends TestCase
     public function testRequiresAuthentication(): void
     {
         $this->assertTrue($this->encryptedPrivateChannel->requiresAuthentication());
+    }
+
+    /**
+     * Test construction from a channel object (HasBroadcastChannel parity)
+     *
+     * @return void
+     */
+    public function testConstructorFromChannelObject(): void
+    {
+        $channel = new EncryptedPrivateChannel(new Channel('orders.1'));
+
+        $this->assertEquals('private-encrypted-orders.1', $channel->getName());
     }
 
     /**

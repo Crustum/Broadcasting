@@ -16,10 +16,14 @@ class EncryptedPrivateChannel extends Channel
     /**
      * Create a new encrypted private channel instance.
      *
-     * @param string $name Channel name (without private-encrypted- prefix)
+     * Accepts a channel object (unwrapped via `getName()`) or a plain name.
+     *
+     * @param \Crustum\Broadcasting\Channel\Channel|string $name Channel name (without private-encrypted- prefix)
      */
-    public function __construct(string $name)
+    public function __construct(Channel|string $name)
     {
+        $name = $name instanceof Channel ? $name->getName() : $name;
+
         parent::__construct('private-encrypted-' . $name);
     }
 
