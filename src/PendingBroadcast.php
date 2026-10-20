@@ -105,6 +105,16 @@ class PendingBroadcast
     protected ?string $uniqueKey = null;
 
     /**
+     * Uniqueness lifetime in seconds, carried in unique job data.
+     *
+     * The effective deduplication window is governed by the queue connection
+     * `uniqueCache` duration; this value documents the event intent.
+     *
+     * @var int|null
+     */
+    protected ?int $uniqueFor = null;
+
+    /**
      * Constructor.
      *
      * @param \Crustum\Broadcasting\Channel\Channel|array<string|\Crustum\Broadcasting\Channel\Channel>|string $channels Channels
@@ -160,6 +170,18 @@ class PendingBroadcast
     {
         $this->unique = $unique;
         $this->uniqueKey = $uniqueKey;
+
+        return $this;
+    }
+
+    /**
+     * Set the uniqueness lifetime (in seconds) for the queued job data.
+     *
+     * @param int|null $seconds Lifetime in seconds
+     */
+    public function uniqueFor(?int $seconds): static
+    {
+        $this->uniqueFor = $seconds;
 
         return $this;
     }
@@ -337,6 +359,10 @@ class PendingBroadcast
             $options['unique'] = true;
             if ($this->uniqueKey !== null) {
                 $options['uniqueKey'] = $this->uniqueKey;
+            }
+
+            if ($this->uniqueFor !== null) {
+                $options['uniqueFor'] = $this->uniqueFor;
             }
         }
 

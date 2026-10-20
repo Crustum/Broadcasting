@@ -197,6 +197,42 @@ class MercureBroadcasterTest extends TestCase
     /**
      * @return void
      */
+    public function testIsNotAsyncByDefault(): void
+    {
+        $this->assertFalse($this->broadcaster()->isAsync());
+    }
+
+    /**
+     * @return void
+     */
+    public function testIsAsyncWhenConfigured(): void
+    {
+        $this->assertTrue($this->broadcaster(['async' => true])->isAsync());
+    }
+
+    /**
+     * Broadcasting through the built-in hub outside FrankenPHP fails at
+     * publish time, pointing at the missing `url` option.
+     *
+     * @return void
+     */
+    public function testBroadcastWithoutFrankenPhpHubFailsAtPublishTime(): void
+    {
+        if (function_exists('mercure_publish')) {
+            $this->markTestSkipped('FrankenPHP hub available.');
+        }
+
+        $broadcaster = new MercureBroadcaster(['secret' => str_repeat('s', 32)]);
+
+        $this->expectException(BroadcastingException::class);
+        $this->expectExceptionMessage('"url"');
+
+        $broadcaster->broadcast(['chat'], 'message');
+    }
+
+    /**
+     * @return void
+     */
     public function testAuthDeniesEmptyChannelNames(): void
     {
         $this->expectException(InvalidChannelException::class);

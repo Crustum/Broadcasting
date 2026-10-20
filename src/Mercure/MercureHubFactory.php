@@ -34,15 +34,27 @@ class MercureHubFactory
      * `publish_algorithm`, `subscribe_algorithm`, `passphrase`,
      * `claims`, `subscribe_claims`, `subscribe_expiration` (minutes),
      * `publish_expiration` (minutes), `cookie_name`, `client_options`,
-     * `encryption_key`, `topic_prefix`, `client_events`.
+     * `encryption_key`, `topic_prefix`, `client_events`, `async`.
      *
      * @param array<string, mixed> $config Connection config
      * @return \Symfony\Component\Mercure\HubInterface Configured hub instance
      */
     public static function hub(array $config): HubInterface
     {
+        if (!empty($config['async']) && empty($config['url'])) {
+            throw new InvalidArgumentException(
+                'The Mercure "async" configuration value requires a "url" configuration value, ' .
+                'as queue workers publish over HTTP.',
+            );
+        }
+
         if (empty($config['url'])) {
             return static::frankenPhpHub($config);
+        }
+
+        $config['url'] = static::absoluteHubUrl((string)$config['url']);
+        if (!empty($config['public_url'])) {
+            $config['public_url'] = static::absoluteHubUrl((string)$config['public_url']);
         }
 
         $publishExpiration = (int)(($config['publish_expiration'] ?? 0) * 60);
@@ -73,6 +85,35 @@ class MercureHubFactory
             $config['cookie_name'] ?? null ?: null,
             ProtocolVersion::V1,
         );
+    }
+
+    /**
+     * Resolve a possibly relative hub URL against the application base URL.
+     *
+     * Absolute URLs (with a scheme) and empty values pass through untouched.
+     *
+     * @param string $url Configured hub URL
+     * @return string Absolute hub URL
+     */
+    protected static function absoluteHubUrl(string $url): string
+    {
+        if ($url === '' || parse_url($url, PHP_URL_SCHEME) !== null) {
+            return $url;
+        }
+
+        $base = (string)Configure::read('App.fullBaseUrl');
+        if ($base === '') {
+            return $url;
+        }
+
+        $origin = parse_url($base);
+        if (!isset($origin['scheme'], $origin['host'])) {
+            return $url;
+        }
+
+        return $origin['scheme'] . '://' . $origin['host']
+            . (isset($origin['port']) ? ':' . $origin['port'] : '')
+            . '/' . ltrim($url, '/');
     }
 
     /**
@@ -250,18 +291,15 @@ class MercureHubFactory
     /**
      * Hub backed by FrankenPHP's built-in hub.
      *
+     * Resolution always succeeds, even outside FrankenPHP: publishing through
+     * the built-in hub from another process fails at broadcast time, when the
+     * broadcaster can point at the missing `url` option.
+     *
      * @param array<string, mixed> $config Connection config
      * @return \Symfony\Component\Mercure\HubInterface FrankenPHP-backed hub instance
      */
     protected static function frankenPhpHub(array $config): HubInterface
     {
-        if (!function_exists('mercure_publish')) {
-            throw new InvalidArgumentException(
-                'The Mercure broadcasting connection requires a "url" configuration value, ' .
-                'unless the application is served by FrankenPHP with its built-in Mercure hub enabled.',
-            );
-        }
-
         return new FrankenPhpHub(
             $config['public_url'] ?? null ?: '/.well-known/mercure',
             static::subscribeFactory($config),

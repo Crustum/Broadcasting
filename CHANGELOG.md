@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2]
+
+### Added
+
+- `async` Mercure connection option (`MERCURE_ASYNC`): Mercure events broadcast synchronously by default; `async: true` restores queueing for queueable events
+- `UniqueFor` event attribute plus `UniqueBroadcastJob::resolveUniqueFor()`: uniqueness lifetime resolves from `uniqueFor()` method, `UniqueFor` attribute (including inherited), or child `$uniqueFor` property, and is carried in unique job data
+- `MercureBroadcaster::isAsync()` and relative hub `url` / `public_url` resolution against `App.fullBaseUrl`
+- `encryption_master_key_base64` Pusher option for end-to-end encrypted private channels
+
+### Fixed
+
+- Resolving the Mercure broadcaster without a `url` no longer fails outside FrankenPHP (e.g. in the CLI); publishing through the built-in hub from another process fails at broadcast time, pointing at the missing `url` option
+- `async: true` without a `url` fails at resolve time, as queue workers publish over HTTP
+
+### Documentation
+
+- Document FrankenPHP's built-in hub and synchronous Mercure broadcasting (`MERCURE_ASYNC`)
+- Document Pusher end-to-end encrypted private channels (`encryption_master_key_base64`, `EncryptedPrivateChannel`, `Echo.encryptedPrivate`, `pusher-js/with-encryption`)
+- Encrypted channels section renamed to Encrypted Private Channels (old anchor kept)
+
 ## [1.4.0]
 
 ### Added

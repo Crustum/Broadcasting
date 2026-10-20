@@ -3,12 +3,14 @@ declare(strict_types=1);
 
 namespace Crustum\Broadcasting\Test\TestCase\Mercure;
 
+use Cake\Core\Configure;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\MercureBroadcaster;
 use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Mercure\MercureHubFactory;
 use InvalidArgumentException;
 use Jose\Component\Encryption\JWEBuilder;
+use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\HubInterface;
 
 /**
@@ -27,18 +29,28 @@ class MercureHubFactoryTest extends TestCase
     }
 
     /**
+     * A missing URL resolves the built-in hub even outside FrankenPHP.
+     *
+     * Publishing through it fails at broadcast time instead.
+     *
      * @return void
      */
-    public function testMercureRequiresAUrl(): void
+    public function testMercureWithoutAUrlResolvesOutsideFrankenPhp(): void
     {
-        if (function_exists('mercure_publish')) {
-            $this->markTestSkipped('FrankenPHP hub available.');
-        }
+        $hub = MercureHubFactory::hub(['secret' => str_repeat('s', 32)]);
 
+        $this->assertInstanceOf(FrankenPhpHub::class, $hub);
+    }
+
+    /**
+     * @return void
+     */
+    public function testAsyncMercureRequiresAUrl(): void
+    {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('"url"');
+        $this->expectExceptionMessage('"async"');
 
-        MercureHubFactory::hub(['secret' => str_repeat('s', 32)]);
+        MercureHubFactory::hub(['secret' => str_repeat('s', 32), 'async' => true]);
     }
 
     /**
@@ -261,6 +273,43 @@ class MercureHubFactoryTest extends TestCase
             'url' => 'https://hub.test/.well-known/mercure',
             'secret' => str_repeat('s', 32),
         ];
+    }
+
+    /**
+     * Relative hub URLs resolve against the application base URL.
+     *
+     * @return void
+     */
+    public function testMercureResolvesRelativeHubUrls(): void
+    {
+        $baseUrl = Configure::read('App.fullBaseUrl');
+        Configure::write('App.fullBaseUrl', 'https://app.test');
+
+        try {
+            /** @var \Symfony\Component\Mercure\Hub $hub */
+            $hub = MercureHubFactory::hub($this->mercureConfig([
+                'url' => '/.well-known/mercure',
+                'public_url' => '/hub',
+            ]));
+
+            $this->assertSame('https://app.test/.well-known/mercure', $hub->getUrl());
+            $this->assertSame('https://app.test/hub', $hub->getPublicUrl());
+        } finally {
+            Configure::write('App.fullBaseUrl', $baseUrl);
+        }
+    }
+
+    /**
+     * Absolute hub URLs pass through untouched.
+     *
+     * @return void
+     */
+    public function testMercureKeepsAbsoluteHubUrls(): void
+    {
+        /** @var \Symfony\Component\Mercure\Hub $hub */
+        $hub = MercureHubFactory::hub($this->mercureConfig());
+
+        $this->assertSame('https://hub.test/.well-known/mercure', $hub->getUrl());
     }
 
     /**

@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
 use Symfony\Component\HttpFoundation\Request as SfRequest;
 use Symfony\Component\Mercure\Authorization;
 use Symfony\Component\Mercure\Exception\RuntimeException as MercureRuntimeException;
+use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\Grant;
@@ -87,8 +88,43 @@ class MercureBroadcaster extends BaseBroadcaster
         $this->config['subscribe_expiration'] = $config['subscribe_expiration'] ?? 5;
         $this->config['topic_prefix'] = (string)($config['topic_prefix'] ?? null ?: 'https://crustum.cake/echo/');
         $this->config['client_events'] = (bool)($config['client_events'] ?? true);
+        $this->config['async'] = (bool)($config['async'] ?? false);
         if (!array_key_exists('encryption_key', $this->config) && !empty($config['encryption_key'])) {
             $this->config['encryption_key'] = $config['encryption_key'];
+        }
+    }
+
+    /**
+     * Whether broadcasts on this connection are queued instead of sent immediately.
+     *
+     * Publishing to a Mercure hub is fast, as the hub dispatches updates
+     * asynchronously, so events broadcast synchronously by default. Setting
+     * `async` to `true` restores queueing; queue workers publish over HTTP
+     * and therefore require a `url`.
+     *
+     * @return bool
+     */
+    public function isAsync(): bool
+    {
+        return (bool)($this->config['async'] ?? false);
+    }
+
+    /**
+     * Fail when the built-in hub cannot publish from this process.
+     *
+     * @return void
+     * @throws \Crustum\Broadcasting\Exception\BroadcastingException When publishing
+     *   through FrankenPHP's built-in hub outside FrankenPHP
+     */
+    protected function assertPublishable(): void
+    {
+        if ($this->hub instanceof FrankenPhpHub && !function_exists('mercure_publish')) {
+            throw new BroadcastingException(
+                'Mercure broadcasting through the built-in hub is only available to requests ' .
+                'served by FrankenPHP. Configure a "url" to broadcast from other processes, ' .
+                'such as the CLI or queue workers.',
+                500,
+            );
         }
     }
 
@@ -157,6 +193,8 @@ class MercureBroadcaster extends BaseBroadcaster
         if ($channels === []) {
             return;
         }
+
+        $this->assertPublishable();
 
         $socket = $payload['socket'] ?? null;
         unset($payload['socket']);
@@ -265,6 +303,8 @@ class MercureBroadcaster extends BaseBroadcaster
         if ($normalized === []) {
             return;
         }
+
+        $this->assertPublishable();
 
         $chunkSize = max(1, $chunkSize);
 

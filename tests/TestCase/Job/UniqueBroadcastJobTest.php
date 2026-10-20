@@ -6,10 +6,15 @@ namespace Crustum\Broadcasting\Test\TestCase\Job;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\Channel\Channel;
+use Crustum\Broadcasting\Event\UniqueFor;
 use Crustum\Broadcasting\Job\BroadcastJob;
 use Crustum\Broadcasting\Job\UniqueBroadcastJob;
+use Crustum\Broadcasting\Test\TestApp\Event\InheritedUniqueForAttributeEvent;
 use Crustum\Broadcasting\Test\TestApp\Event\TestBroadcastableClass;
 use Crustum\Broadcasting\Test\TestApp\Event\TestUniqueBroadcastableClass;
+use Crustum\Broadcasting\Test\TestApp\Event\UniqueForAttributeEvent;
+use Crustum\Broadcasting\Test\TestApp\Event\UniqueForMethodEvent;
+use Crustum\Broadcasting\Test\TestApp\Event\UniqueForPropertyEvent;
 use Crustum\Broadcasting\TestSuite\TestQueueAdapter;
 use ReflectionClass;
 
@@ -160,5 +165,76 @@ class UniqueBroadcastJobTest extends TestCase
 
         $this->assertSame(2, TestQueueAdapter::getQueuedJobCount());
         $this->assertCount(2, TestQueueAdapter::getQueuedJobsByClass(BroadcastJob::class));
+    }
+
+    /**
+     * Test resolveUniqueFor reads the UniqueFor attribute.
+     *
+     * @return void
+     */
+    public function testResolveUniqueForReadsAttribute(): void
+    {
+        $this->assertSame(60, UniqueBroadcastJob::resolveUniqueFor(new UniqueForAttributeEvent()));
+    }
+
+    /**
+     * Test resolveUniqueFor reads an inherited UniqueFor attribute.
+     *
+     * @return void
+     */
+    public function testResolveUniqueForReadsInheritedAttribute(): void
+    {
+        $this->assertSame(60, UniqueBroadcastJob::resolveUniqueFor(new InheritedUniqueForAttributeEvent()));
+    }
+
+    /**
+     * Test resolveUniqueFor prefers the uniqueFor() method over the attribute.
+     *
+     * @return void
+     */
+    public function testResolveUniqueForMethodOverridesAttribute(): void
+    {
+        $this->assertSame(120, UniqueBroadcastJob::resolveUniqueFor(new UniqueForMethodEvent()));
+    }
+
+    /**
+     * Test resolveUniqueFor prefers a child property over an inherited attribute.
+     *
+     * @return void
+     */
+    public function testResolveUniqueForChildPropertyOverridesInheritedAttribute(): void
+    {
+        $this->assertSame(180, UniqueBroadcastJob::resolveUniqueFor(new UniqueForPropertyEvent()));
+    }
+
+    /**
+     * Test resolveUniqueFor returns null when the event declares no lifetime.
+     *
+     * @return void
+     */
+    public function testResolveUniqueForDefaultsToNull(): void
+    {
+        $this->assertNull(UniqueBroadcastJob::resolveUniqueFor(new TestUniqueBroadcastableClass()));
+    }
+
+    /**
+     * Test the resolved lifetime is carried in unique job data.
+     *
+     * @return void
+     */
+    public function testUniqueForIsCarriedInJobData(): void
+    {
+        $event = new #[UniqueFor(60)] class extends TestUniqueBroadcastableClass {
+        };
+        $event->setEventName('UniqueForEvent')
+            ->setChannels(new Channel('orders'))
+            ->setData(['id' => 1])
+            ->setQueue('broadcasting');
+
+        Broadcasting::event($event);
+
+        $jobs = TestQueueAdapter::getQueuedJobsByClass(UniqueBroadcastJob::class);
+        $this->assertCount(1, $jobs);
+        $this->assertSame(60, $jobs[0]['data']['uniqueFor']);
     }
 }

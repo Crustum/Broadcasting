@@ -3,11 +3,14 @@ declare(strict_types=1);
 
 namespace Crustum\Broadcasting;
 
+use BackedEnum;
+use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\StaticConfigTrait;
 use Cake\Log\Log;
 use Crustum\Broadcasting\Broadcaster\BaseBroadcaster;
 use Crustum\Broadcasting\Broadcaster\BroadcasterInterface;
+use Crustum\Broadcasting\Broadcaster\MercureBroadcaster;
 use Crustum\Broadcasting\Broadcaster\NullBroadcaster;
 use Crustum\Broadcasting\Channel\Channel;
 use Crustum\Broadcasting\Channel\PresenceChannel;
@@ -286,6 +289,11 @@ class Broadcasting
                     ? $event->broadcastUniqueKey()
                     : null;
                 $pending->unique(true, is_string($uniqueKey) ? $uniqueKey : null);
+
+                $uniqueFor = UniqueBroadcastJob::resolveUniqueFor($event);
+                if ($uniqueFor !== null) {
+                    $pending->uniqueFor($uniqueFor);
+                }
             }
 
             $queueName = static::resolveBroadcastQueue($event);
@@ -305,10 +313,82 @@ class Broadcasting
                 $pending->priority($priority);
             }
 
-            $pending->queue($queueName);
+            if (static::broadcastsToSynchronousMercureConnections($event)) {
+                $pending->send();
+            } else {
+                $pending->queue($queueName);
+            }
         }
 
         return $pending;
+    }
+
+    /**
+     * Determine if the given event only targets synchronous Mercure connections.
+     *
+     * Events may declare their connections via `broadcastConnections()`; a
+     * single non-Mercure or asynchronous Mercure connection keeps the event
+     * queued. Connection routing itself still uses `PendingBroadcast`
+     * (`connection()`), this check only decides sync-vs-queue dispatch.
+     *
+     * @param \Crustum\Broadcasting\Event\BroadcastableInterface $event Event object
+     * @return bool
+     */
+    protected static function broadcastsToSynchronousMercureConnections(BroadcastableInterface $event): bool
+    {
+        $connections = method_exists($event, 'broadcastConnections')
+            ? (array)$event->broadcastConnections()
+            : [null];
+
+        if ($connections === []) {
+            return false;
+        }
+
+        foreach ($connections as $connection) {
+            $name = $connection instanceof BackedEnum
+                ? (string)$connection->value
+                : (string)($connection ?? 'default');
+
+            if (!static::isSynchronousMercureConnection($name)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether a connection is a non-`async` Mercure connection.
+     *
+     * Inspects configuration only, so merely dispatching an event never
+     * builds a broadcaster as a side effect.
+     *
+     * @param string $name Connection name
+     * @return bool
+     */
+    protected static function isSynchronousMercureConnection(string $name): bool
+    {
+        $config = static::getConfig($name);
+        if (!is_array($config)) {
+            return false;
+        }
+
+        $className = $config['className'] ?? null;
+        if ($className instanceof MercureBroadcaster) {
+            return !$className->isAsync();
+        }
+
+        if (is_string($className)) {
+            $resolved = class_exists($className)
+                ? $className
+                : App::className($className, 'Broadcaster', 'Broadcaster');
+
+            if (is_string($resolved) && is_a($resolved, MercureBroadcaster::class, true)) {
+                return empty($config['async']);
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -547,7 +627,8 @@ class Broadcasting
 
         $unique = !empty($options['unique']);
         $uniqueKey = $options['uniqueKey'] ?? null;
-        unset($options['unique'], $options['uniqueKey']);
+        $uniqueFor = $options['uniqueFor'] ?? null;
+        unset($options['unique'], $options['uniqueKey'], $options['uniqueFor']);
 
         $jobData = [
             'eventName' => $event,
@@ -558,6 +639,10 @@ class Broadcasting
 
         if ($unique && is_string($uniqueKey) && $uniqueKey !== '') {
             $jobData['uniqueKey'] = $uniqueKey;
+        }
+
+        if ($unique && $uniqueFor !== null) {
+            $jobData['uniqueFor'] = (int)$uniqueFor;
         }
 
         $jobClass = $unique ? UniqueBroadcastJob::class : BroadcastJob::class;

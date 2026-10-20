@@ -17,6 +17,7 @@ use Crustum\Broadcasting\PendingBroadcast;
 use Crustum\Broadcasting\Queue\QueueAdapterInterface;
 use Crustum\Broadcasting\Registry\BroadcasterRegistry;
 use Crustum\Broadcasting\Test\TestApp\Event\TestBroadcastableClass;
+use Crustum\Broadcasting\Test\TestCase\Broadcaster\CapturingMercureBroadcaster;
 use Crustum\Broadcasting\Test\TestCase\Broadcaster\FailingLogBroadcaster;
 use Crustum\Broadcasting\TestSuite\BroadcastingTrait;
 use Crustum\Broadcasting\TestSuite\TestBroadcaster;
@@ -805,5 +806,97 @@ class BroadcastingTest extends TestCase
         $broadcaster = Broadcasting::get('default');
 
         $this->assertInstanceOf(TestBroadcaster::class, $broadcaster);
+    }
+
+    /**
+     * Test queueable events on a synchronous Mercure connection send immediately.
+     *
+     * @return void
+     */
+    public function testMercureEventsAreBroadcastNow(): void
+    {
+        $capturing = new CapturingMercureBroadcaster([
+            'url' => 'https://hub.test/.well-known/mercure',
+            'secret' => str_repeat('s', 32),
+        ]);
+        Broadcasting::setConfig('default', ['className' => $capturing]);
+
+        $event = new TestBroadcastableClass();
+        $event->setEventName('MercureEvent')
+            ->setChannels(new Channel('orders'))
+            ->setData(['id' => 1])
+            ->setQueue('broadcasting');
+
+        Broadcasting::event($event);
+
+        $this->assertCount(1, $capturing->sent);
+        $this->assertSame('MercureEvent', $capturing->sent[0]['event']);
+        $this->assertSame(0, TestQueueAdapter::getQueuedJobCount());
+    }
+
+    /**
+     * Test queueable events on an async Mercure connection stay queued.
+     *
+     * @return void
+     */
+    public function testAsyncMercureEventsAreQueued(): void
+    {
+        $capturing = new CapturingMercureBroadcaster([
+            'url' => 'https://hub.test/.well-known/mercure',
+            'secret' => str_repeat('s', 32),
+            'async' => true,
+        ]);
+        Broadcasting::setConfig('default', ['className' => $capturing]);
+
+        $event = new TestBroadcastableClass();
+        $event->setEventName('MercureEvent')
+            ->setChannels(new Channel('orders'))
+            ->setData(['id' => 1])
+            ->setQueue('broadcasting');
+
+        Broadcasting::event($event);
+
+        $this->assertSame([], $capturing->sent);
+        $this->assertSame(1, TestQueueAdapter::getQueuedJobCount());
+    }
+
+    /**
+     * Test events targeting Mercure and another connection stay queued.
+     *
+     * @return void
+     */
+    public function testEventsBroadcastToMercureAndOtherConnectionsAreQueued(): void
+    {
+        $capturing = new CapturingMercureBroadcaster([
+            'url' => 'https://hub.test/.well-known/mercure',
+            'secret' => str_repeat('s', 32),
+        ]);
+        Broadcasting::setConfig('default', ['className' => $capturing]);
+        Broadcasting::setConfig('mercure', [
+            'className' => new CapturingMercureBroadcaster([
+                'url' => 'https://hub.test/.well-known/mercure',
+                'secret' => str_repeat('s', 32),
+            ]),
+        ]);
+        Broadcasting::setConfig('log', ['className' => TestBroadcaster::class]);
+
+        $event = new class extends TestBroadcastableClass {
+            /**
+             * @return list<string>
+             */
+            public function broadcastConnections(): array
+            {
+                return ['mercure', 'log'];
+            }
+        };
+        $event->setEventName('MercureEvent')
+            ->setChannels(new Channel('orders'))
+            ->setData(['id' => 1])
+            ->setQueue('broadcasting');
+
+        Broadcasting::event($event);
+
+        $this->assertSame([], $capturing->sent);
+        $this->assertSame(1, TestQueueAdapter::getQueuedJobCount());
     }
 }

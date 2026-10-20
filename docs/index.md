@@ -38,6 +38,7 @@
     - [Authorizing Presence Channels](#authorizing-presence-channels)
     - [Joining Presence Channels](#joining-presence-channels)
     - [Broadcasting to Presence Channels](#broadcasting-to-presence-channels)
+- [Encrypted Private Channels](#encrypted-private-channels)
 - [Model Broadcasting](#model-broadcasting)
     - [Model Broadcasting Behavior](#model-broadcasting-behavior)
     - [Listening for Model Broadcasts](#listening-for-model-broadcasts)
@@ -153,7 +154,7 @@ return [
 Once you have enabled event broadcasting, you're ready to learn more about [defining broadcast events](#defining-broadcast-events) and [listening for events](#listening-for-events).
 
 > [!NOTE]
-> Before broadcasting any events, you should first configure and run a queue worker. All event broadcasting is done via queued jobs so that the response time of your application is not seriously affected by events being broadcast.
+> Before broadcasting any events, you should first configure and run a queue worker. All event broadcasting is done via queued jobs so that the response time of your application is not seriously affected by events being broadcast. The Mercure driver is an exception, as it [broadcasts events synchronously](#mercure-synchronous-broadcasting) by default.
 
 <a name="server-side-installation"></a>
 ## Server Side Installation
@@ -195,6 +196,24 @@ The `config/broadcasting.php` file's `pusher` configuration also allows you to s
         'scheme' => 'http',
     ],
 ],
+```
+
+<a name="pusher-encrypted-private-channels"></a>
+#### Encrypted Private Channels
+
+If you plan to use [end-to-end encrypted private channels](#encrypted-private-channels), add an `encryption_master_key_base64` option containing a base64-encoded, 32-byte key to the `pusher` connection's `options` array:
+
+```php
+'options' => [
+    // ...
+    'encryption_master_key_base64' => env('PUSHER_ENCRYPTION_MASTER_KEY'),
+],
+```
+
+You may generate a suitable key using the `openssl` command:
+
+```shell
+openssl rand -base64 32
 ```
 
 Finally, you are ready to install and configure [Laravel Echo](#client-side-installation), which will receive the broadcast events on the client-side.
@@ -247,6 +266,7 @@ Configure the Mercure connection in `config/broadcasting.php`:
         'iss' => env('MERCURE_JWT_ISSUER'),
     ],
     'subscribe_expiration' => (int)env('MERCURE_SUBSCRIBE_EXPIRATION', 5),
+    'async' => (bool)env('MERCURE_ASYNC', false),
 ],
 ```
 
@@ -259,9 +279,36 @@ MERCURE_JWT_SECRET="your-jwt-secret-at-least-32-bytes-long"
 MERCURE_ENCRYPTION_KEY="base64:your-base64-encoded-32-byte-key"
 MERCURE_JWT_ISSUER="https://your-app.example.com"
 MERCURE_SUBSCRIBE_EXPIRATION=5
+MERCURE_ASYNC=false
 ```
 
+Relative `url` and `public_url` values are resolved against your application's full base URL, so `/.well-known/mercure` works without repeating the domain.
+
 When `url` is empty and the application runs on FrankenPHP with its built-in Mercure hub enabled, the driver falls back to the FrankenPHP hub automatically.
+
+<a name="mercure-frankenphp"></a>
+#### FrankenPHP's Built-In Hub
+
+[FrankenPHP](https://frankenphp.dev) includes a built-in Mercure hub. When your application is served by FrankenPHP, you may leave the `MERCURE_URL` and `MERCURE_PUBLIC_URL` environment variables empty. The plugin then publishes updates directly to the hub, without any HTTP request, and browsers subscribe to `/.well-known/mercure` on your application's domain.
+
+Publishing directly to the built-in hub is only possible from requests served by FrankenPHP. To broadcast events from other processes, such as CakePHP shell commands or queue workers, configure the URL of the hub:
+
+```ini
+MERCURE_URL="${APP_FULL_BASE_URL}/.well-known/mercure"
+```
+
+Resolving the broadcaster without a `url` never fails — even outside FrankenPHP, for example in the CLI. The failure surfaces at broadcast time with an error pointing at the missing `url` option.
+
+<a name="mercure-synchronous-broadcasting"></a>
+#### Synchronous Broadcasting
+
+Unlike other drivers, the Mercure driver broadcasts events immediately instead of queueing them, so it doesn't require a queue worker. Publishing an update is fast, since the hub dispatches it to subscribers asynchronously. To broadcast events using your [queue](#broadcast-queue) instead, set the `MERCURE_ASYNC` environment variable to `true`:
+
+```ini
+MERCURE_ASYNC=true
+```
+
+Since queue workers publish updates over HTTP, `MERCURE_ASYNC` requires the `MERCURE_URL` environment variable. When using FrankenPHP's built-in hub, set it to the URL of the hub, [as described above](#mercure-frankenphp).
 
 #### Mercure Configuration Options
 
@@ -280,6 +327,7 @@ When `url` is empty and the application runs on FrankenPHP with its built-in Mer
 | `topic_prefix` | Prefix for Mercure topics (default: `https://crustum.cake/echo/`). |
 | `client_events` | Enable client events / whisper topics (default: `true`). |
 | `client_options` | Symfony HTTP client options passed to the hub's HTTP client. |
+| `async` | Queue events instead of broadcasting synchronously (default: `false`). Requires `url`. |
 
 <a name="client-side-installation"></a>
 ## Client Side Installation
@@ -890,14 +938,12 @@ Skipping CSRF on these endpoints matches the usual realtime stack. Authorization
 3. For WebSocket Origin / CORS on the realtime server — configure the server (for example BlazeCast `allowed_origins`), not CSRF middleware
 
 <a name="encrypted-channels"></a>
-### Encrypted Channels
+<a name="encrypted-private-channels"></a>
+### Encrypted Private Channels
 
-Encrypted channels provide end-to-end encryption for private channel updates through the Mercure driver. When a channel uses the `private-encrypted-` prefix, its payload is encrypted on the server before publishing and decrypted by the subscriber using a JSON Web Key (JWK) exchanged during authorization.
+Private channels ensure that only authorized users may listen on a channel. However, the event data itself still passes through your broadcasting service in plain text. When using Pusher Channels or Mercure, you may use end-to-end encrypted private channels so that only your application and its authorized clients are able to read the event's data.
 
-> [!NOTE]
-> Encrypted channels require `web-token/jwt-library` and an `encryption_key` configuration value.
-
-Use `EncryptedPrivateChannel` in your event:
+To get started, configure an encryption key for [Pusher Channels](#pusher-encrypted-private-channels) or [Mercure](#mercure). Then, return an instance of `EncryptedPrivateChannel` from your event's `broadcastChannel` method:
 
 ```php
 use Crustum\Broadcasting\Channel\EncryptedPrivateChannel;
@@ -907,6 +953,34 @@ public function broadcastChannel(): Channel|array
     return new EncryptedPrivateChannel('orders.' . $this->order->id);
 }
 ```
+
+Encrypted private channels are authorized exactly like private channels, so an `orders.{orderId}` authorization callback in your application's `config/channels.php` file will also authorize the encrypted `orders.1` channel.
+
+In your JavaScript application, you may subscribe to the channel using Echo's `encryptedPrivate` method:
+
+```js
+Echo.encryptedPrivate(`orders.${orderId}`)
+    .listen('OrderShipmentStatusUpdated', (e) => {
+        console.log(e.order);
+    });
+```
+
+When using Pusher Channels, the default `pusher-js` build does not include the code needed to decrypt messages. Instead, you should import the `with-encryption` build when configuring Echo:
+
+```js
+import Pusher from 'pusher-js/with-encryption';
+window.Pusher = Pusher;
+```
+
+> [!NOTE]
+> The Pusher SDK encrypts each channel separately: broadcast to a single encrypted channel per call. Multi-channel fan-out and bulk batches fall back to one request per encrypted channel automatically.
+
+#### Mercure Encrypted Channels
+
+When a channel uses the `private-encrypted-` prefix, its payload is encrypted on the server before publishing and decrypted by the subscriber using a JSON Web Key (JWK) exchanged during authorization.
+
+> [!NOTE]
+> Mercure encrypted channels require `web-token/jwt-library` and an `encryption_key` configuration value.
 
 During authorization (`/broadcasting/auth`), the response for an encrypted channel includes the JWK the subscriber needs to decrypt updates:
 

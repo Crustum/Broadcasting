@@ -105,6 +105,12 @@ return [
                     'host' => env('PUSHER_HOST'),
                     'port' => env('PUSHER_PORT', 443),
                     'scheme' => env('PUSHER_SCHEME', 'https'),
+                    /**
+                     * Master key for end-to-end encrypted private channels
+                     * (`private-encrypted-`). Base64-encoded 32 bytes; see
+                     * docs/index.md#encrypted-private-channels.
+                     */
+                    'encryption_master_key_base64' => env('PUSHER_ENCRYPTION_MASTER_KEY'),
                 ],
                 /**
                  * Personalized bulk (`triggerBatch`) max events per HTTP request.
@@ -143,6 +149,13 @@ return [
                     'iss' => env('MERCURE_JWT_ISSUER'),
                 ],
                 'subscribe_expiration' => (int)env('MERCURE_SUBSCRIBE_EXPIRATION', 5),
+                /**
+                 * Broadcast Mercure events synchronously instead of queueing them.
+                 * Publishing an update is fast, since the hub dispatches it to
+                 * subscribers asynchronously. Queue workers publish over HTTP and
+                 * therefore require a `url`.
+                 */
+                'async' => (bool)env('MERCURE_ASYNC', false),
             ],
         ],
 
