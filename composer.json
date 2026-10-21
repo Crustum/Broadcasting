@@ -14,7 +14,7 @@
         "cakephp/cakephp": "^5.1",
         "cakephp/authentication": "*",
         "cakephp/authorization": "*",
-        "cakephp/queue": "^2.2",
+        "cakephp/queue": "^2.2|3.x-dev",
         "guzzlehttp/psr7": "^2.6",
         "pusher/pusher-php-server": "^7.2",
         "symfony/routing": "^6.0|^7.3",
