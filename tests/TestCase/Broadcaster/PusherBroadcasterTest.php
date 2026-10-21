@@ -635,7 +635,7 @@ class PusherBroadcasterTest extends TestCase
             $pusher,
         );
 
-        $broadcaster->expects($this->any())
+        $broadcaster->expects($this->exactly(2))
             ->method('retrieveUserFromCakeRequest')
             ->willReturn($mockUser);
 

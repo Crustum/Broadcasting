@@ -10,18 +10,12 @@ use Cake\Core\PluginApplicationInterface;
 use Cake\Log\Log;
 use Cake\Routing\RouteBuilder;
 use Crustum\Broadcasting\Command\ChannelCommand;
-use Crustum\PluginManifest\Manifest\ManifestInterface;
-use Crustum\PluginManifest\Manifest\ManifestTrait;
 
 /**
  * Plugin for Broadcasting
- *
- * @uses \Crustum\PluginManifest\Manifest\ManifestTrait
  */
-class BroadcastingPlugin extends BasePlugin implements ManifestInterface
+class BroadcastingPlugin extends BasePlugin
 {
-    use ManifestTrait;
-
     /**
      * Dispatched before a broadcast is sent to a driver.
      *
@@ -132,33 +126,5 @@ class BroadcastingPlugin extends BasePlugin implements ManifestInterface
         );
 
         parent::routes($routes);
-    }
-
-    /**
-     * Get the manifest for the plugin.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public static function manifest(): array
-    {
-        $pluginPath = dirname(__DIR__);
-
-        return array_merge(
-            static::manifestConfig(
-                $pluginPath . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'broadcasting.php',
-                CONFIG . 'broadcasting.php',
-                false,
-            ),
-            static::manifestConfig(
-                $pluginPath . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'channels.php.example',
-                CONFIG . 'channels.php',
-                false,
-            ),
-            static::manifestBootstrapAppend(
-                "if (file_exists(CONFIG . 'broadcasting.php')) {\n    Configure::load('broadcasting', 'default');\n}",
-                '// Broadcasting Plugin Configuration',
-            ),
-            static::manifestStarRepo('Crustum/Broadcasting'),
-        );
     }
 }
