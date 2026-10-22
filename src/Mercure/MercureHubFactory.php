@@ -169,7 +169,9 @@ class MercureHubFactory
         }
 
         $claims = static::claims($config);
-        $claims['sub'] = $claims['sub'] ?? null ?: 'anonymous';
+        if (empty($claims['sub'])) {
+            $claims['sub'] = 'anonymous';
+        }
 
         return new DefaultClaimsTokenFactory(
             WebTokenFactory::fromSecret(
@@ -282,8 +284,13 @@ class MercureHubFactory
         }
 
         $claims['aud'] = $claims['aud'] ?? null ?: ($config['public_url'] ?? null ?: $url);
-        $claims['iss'] = $claims['iss'] ?? null ?: ($appUrl ?: $url);
-        $claims['client_id'] = $claims['client_id'] ?? null ?: $claims['iss'];
+        if (empty($claims['iss'])) {
+            $claims['iss'] = $appUrl ?: $url;
+        }
+
+        if (empty($claims['client_id'])) {
+            $claims['client_id'] = $claims['iss'];
+        }
 
         return $claims;
     }

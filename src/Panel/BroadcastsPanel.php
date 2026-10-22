@@ -234,9 +234,7 @@ class BroadcastsPanel implements EventListenerInterface
     /**
      * Correlates lifecycle events by broadcaster identity.
      *
-     * Events without a subject cannot correlate and are ignored —
-     * `getSubject()` itself throws on a missing subject, so read it
-     * defensively and never let the panel break the dispatch chain.
+     * Events without an object subject cannot correlate and are ignored.
      *
      * @param \Cake\Event\EventInterface<object> $event Lifecycle event.
      * @return string|null
@@ -246,6 +244,10 @@ class BroadcastsPanel implements EventListenerInterface
         try {
             $subject = $event->getSubject();
         } catch (Throwable) {
+            return null;
+        }
+
+        if (!is_object($subject)) {
             return null;
         }
 

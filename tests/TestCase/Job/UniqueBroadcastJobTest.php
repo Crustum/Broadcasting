@@ -59,7 +59,7 @@ class UniqueBroadcastJobTest extends TestCase
     {
         $this->assertTrue(UniqueBroadcastJob::$shouldBeUnique);
 
-        $staticProperties = (new ReflectionClass(BroadcastJob::class))->getStaticProperties();
+        $staticProperties = new ReflectionClass(BroadcastJob::class)->getStaticProperties();
         $this->assertArrayNotHasKey('shouldBeUnique', $staticProperties);
     }
 

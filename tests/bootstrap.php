@@ -123,6 +123,6 @@ $error = [
     'trace' => true,
     'ignoredDeprecationPaths' => [],
 ];
-(new ErrorTrap($error))->register();
+new ErrorTrap($error)->register();
 
 require CONFIG . 'bootstrap.php';

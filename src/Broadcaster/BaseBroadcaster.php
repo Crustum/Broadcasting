@@ -101,7 +101,7 @@ abstract class BaseBroadcaster implements BroadcasterInterface
      * @param \Closure $callback User resolution callback
      * @return $this
      */
-    public function registerUserResolver(Closure $callback)
+    public function registerUserResolver(Closure $callback): static
     {
         $this->authenticatedUserCallback = $callback;
 
@@ -116,7 +116,7 @@ abstract class BaseBroadcaster implements BroadcasterInterface
      * @param array<string, mixed> $options Channel options
      * @return $this
      */
-    public function registerChannel(string $channel, callable|string $callback, array $options = [])
+    public function registerChannel(string $channel, callable|string $callback, array $options = []): static
     {
         $this->channels[$channel] = $callback;
         $this->channelOptions[$channel] = $options;

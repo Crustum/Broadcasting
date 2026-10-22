@@ -5,11 +5,11 @@ namespace Crustum\Broadcasting\Command;
 
 use Bake\Command\BakeCommand;
 use Bake\Utility\TemplateRenderer;
-use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
 use Cake\Utility\Inflector;
+use Override;
 
 /**
  * Command for generating Channel authorization classes.
@@ -35,10 +35,9 @@ class ChannelCommand extends BakeCommand
     /**
      * Execute the command.
      *
-     * @param \Cake\Console\Arguments $args The command arguments.
-     * @param \Cake\Console\ConsoleIo $io The console io
      * @return int|null The exit code or null for success
      */
+    #[Override]
     public function execute(): ?int
     {
         $name = $this->args->getArgumentAt(0);
@@ -48,18 +47,22 @@ class ChannelCommand extends BakeCommand
 
             return static::CODE_ERROR;
         }
+
         $name = $this->getNameWithoutPrefix($name);
         // Ensure Channel suffix
         if (!str_ends_with($name, 'Channel')) {
             $name .= 'Channel';
         }
+
         $content = $this->getContent($name);
         if (empty($content)) {
             $this->io->err("<warning>No generated content for '{$name}', not generating template.</warning>");
 
             return static::CODE_ERROR;
         }
+
         $this->bake($name, $content);
+
         return static::CODE_SUCCESS;
     }
 
@@ -67,8 +70,6 @@ class ChannelCommand extends BakeCommand
      * Assembles and writes bakes the channel file.
      *
      * @param string $name Channel name
-     * @param \Cake\Console\Arguments $args CLI arguments
-     * @param \Cake\Console\ConsoleIo $io Console io
      * @param string|true $content Content to write.
      * @return void
      */
@@ -96,8 +97,6 @@ class ChannelCommand extends BakeCommand
      * Get content for channel class.
      *
      * @param string $name Channel name
-     * @param \Cake\Console\Arguments $args CLI arguments
-     * @param \Cake\Console\ConsoleIo $io Console io
      * @return string|bool Generated content
      */
     public function getContent(string $name): string|bool
@@ -132,19 +131,21 @@ class ChannelCommand extends BakeCommand
      * Gets the path for output. Checks the plugin property
      * and returns the correct path.
      *
-     * @param \Cake\Console\Arguments $args Arguments instance to read the prefix option from.
      * @return string Path to output.
      */
+    #[Override]
     public function getPath(): string
     {
         $path = APP . $this->pathFragment;
         if ($this->plugin) {
             $path = $this->pluginPath($this->plugin) . 'src/' . $this->pathFragment;
         }
+
         $prefix = $this->getPrefix();
         if ($prefix !== '' && $prefix !== '0') {
             $path .= $prefix . DIRECTORY_SEPARATOR;
         }
+
         return str_replace('/', DIRECTORY_SEPARATOR, $path);
     }
 
@@ -154,6 +155,7 @@ class ChannelCommand extends BakeCommand
      * @param \Cake\Console\ConsoleOptionParser $parser The parser to configure
      * @return \Cake\Console\ConsoleOptionParser
      */
+    #[Override]
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         $parser = $this->setCommonOptions($parser);
@@ -169,6 +171,7 @@ class ChannelCommand extends BakeCommand
     /**
      * @inheritDoc
      */
+    #[Override]
     public static function defaultName(): string
     {
         return 'bake channel';

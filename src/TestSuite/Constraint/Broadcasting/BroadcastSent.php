@@ -23,13 +23,7 @@ class BroadcastSent extends BroadcastConstraintBase
         $event = $other;
         $broadcasts = $this->getBroadcasts();
 
-        foreach ($broadcasts as $broadcast) {
-            if ($broadcast['event'] === $event) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($broadcasts, fn(array $broadcast): bool => $broadcast['event'] === $event);
     }
 
     /**

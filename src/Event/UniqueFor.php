@@ -16,13 +16,13 @@ use Attribute;
  * @package Crustum\Broadcasting\Event
  */
 #[Attribute(Attribute::TARGET_CLASS)]
-final class UniqueFor
+final readonly class UniqueFor
 {
     /**
      * @param int $seconds Number of seconds the uniqueness lock is maintained
      */
     public function __construct(
-        public readonly int $seconds,
+        public int $seconds,
     ) {
     }
 }

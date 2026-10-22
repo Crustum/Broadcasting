@@ -99,7 +99,7 @@ class MercureBroadcasterTest extends TestCase
     {
         $broadcaster = new MercureBroadcaster($this->mercureConfig($configOverrides));
 
-        $property = (new ReflectionClass($broadcaster))->getProperty('hub');
+        $property = new ReflectionClass($broadcaster)->getProperty('hub');
         $property->setValue($broadcaster, $this->hub);
 
         return $broadcaster;
@@ -130,13 +130,13 @@ class MercureBroadcasterTest extends TestCase
      */
     protected function authRequest(array $channelNames, array|object|null $user = null, string $host = 'hub.test'): ServerRequest
     {
-        $request = (new ServerRequest([
+        $request = new ServerRequest([
             'url' => '/broadcasting/auth',
             'environment' => [
                 'HTTP_HOST' => $host,
                 'REQUEST_URI' => '/broadcasting/auth',
             ],
-        ]))->withParsedBody(['channel_names' => $channelNames]);
+        ])->withParsedBody(['channel_names' => $channelNames]);
 
         if ($user !== null) {
             $identity = new class ($user) {

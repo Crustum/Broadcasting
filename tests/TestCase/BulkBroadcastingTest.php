@@ -68,7 +68,7 @@ class BulkBroadcastingTest extends TestCase
 
     public function testBulkWithEventObjectsExpandsChannels(): void
     {
-        $event = (new TestBroadcastableClass())
+        $event = new TestBroadcastableClass()
             ->setChannels([
                 new Channel('student.1'),
                 new Channel('student.2'),
@@ -85,7 +85,7 @@ class BulkBroadcastingTest extends TestCase
 
     public function testBulkSkipsConditionalEvents(): void
     {
-        $event = (new TestBroadcastableClass())
+        $event = new TestBroadcastableClass()
             ->setChannels(new Channel('student.1'))
             ->setEventName('Skipped')
             ->setShouldBroadcast(false);

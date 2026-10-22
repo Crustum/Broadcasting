@@ -27,7 +27,7 @@ trait SocketAwareTrait
      *
      * @return $this
      */
-    public function dontBroadcastToCurrentUser()
+    public function dontBroadcastToCurrentUser(): static
     {
         $request = Router::getRequest();
         if ($request instanceof ServerRequest) {
@@ -47,7 +47,7 @@ trait SocketAwareTrait
      *
      * @return $this
      */
-    public function broadcastToEveryone()
+    public function broadcastToEveryone(): static
     {
         $this->socket = null;
 
@@ -70,7 +70,7 @@ trait SocketAwareTrait
      * @param string|null $socket Socket ID
      * @return $this
      */
-    public function setSocket(?string $socket)
+    public function setSocket(?string $socket): static
     {
         $this->socket = $socket;
 

@@ -227,7 +227,7 @@ class PendingBroadcast
      *
      * @return $this
      */
-    public function toOthers()
+    public function toOthers(): static
     {
         return $this->dontBroadcastToCurrentUser();
     }

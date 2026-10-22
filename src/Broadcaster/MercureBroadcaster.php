@@ -173,7 +173,7 @@ class MercureBroadcaster extends BaseBroadcaster
             'client_events' => $this->config['client_events'],
         ], JSON_THROW_ON_ERROR);
 
-        return (new Response())
+        return new Response()
             ->withType('application/json')
             ->withStringBody($body)
             ->withCookie($this->toCakeCookie($cookie));
@@ -596,7 +596,7 @@ class MercureBroadcaster extends BaseBroadcaster
         $hubRequest = SfRequest::create((string)$request->getUri(), 'POST');
 
         try {
-            return (new Authorization(new HubRegistry($this->hub), $this->expiration()))
+            return new Authorization(new HubRegistry($this->hub), $this->expiration())
                 ->createCookie($hubRequest, $grants, null, $claims);
         } catch (MercureRuntimeException $mercureRuntimeException) {
             throw new BroadcastingException(
@@ -634,7 +634,7 @@ class MercureBroadcaster extends BaseBroadcaster
         return new Cookie(
             $cookie->getName(),
             (string)$cookie->getValue(),
-            (new DateTimeImmutable())->setTimestamp($cookie->getExpiresTime()),
+            new DateTimeImmutable()->setTimestamp($cookie->getExpiresTime()),
             $cookie->getPath(),
             $cookie->getDomain(),
             $cookie->isSecure(),

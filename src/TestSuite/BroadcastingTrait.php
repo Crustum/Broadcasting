@@ -181,14 +181,7 @@ trait BroadcastingTrait
         $broadcasts = TestBroadcaster::getBroadcastsByEvent($event);
 
         foreach ($channels as $channel) {
-            $found = false;
-            foreach ($broadcasts as $broadcast) {
-                if (in_array($channel, $broadcast['channels'])) {
-                    $found = true;
-                    break;
-                }
-            }
-
+            $found = array_any($broadcasts, fn(array $broadcast): bool => in_array($channel, $broadcast['channels']));
             $this->assertTrue(
                 $found,
                 $message ?: "Broadcast {$event} was not sent to channel {$channel}",
@@ -299,14 +292,7 @@ trait BroadcastingTrait
     ): void {
         $broadcasts = TestBroadcaster::getBroadcastsByEvent($event);
         $this->assertNotEmpty($broadcasts, "Broadcast {$event} was not sent");
-
-        $found = false;
-        foreach ($broadcasts as $broadcast) {
-            if ($broadcast['socket'] === $socket) {
-                $found = true;
-                break;
-            }
-        }
+        $found = array_any($broadcasts, fn(array $broadcast): bool => $broadcast['socket'] === $socket);
 
         $this->assertTrue(
             $found,
@@ -425,13 +411,7 @@ trait BroadcastingTrait
         string $message = '',
     ): void {
         $queued = TestQueueAdapter::getQueuedBroadcastsByChannel($channel);
-        $found = false;
-        foreach ($queued as $job) {
-            if (isset($job['data']['eventName']) && $job['data']['eventName'] === $event) {
-                $found = true;
-                break;
-            }
-        }
+        $found = array_any($queued, fn(array $job): bool => isset($job['data']['eventName']) && $job['data']['eventName'] === $event);
 
         $this->assertTrue(
             $found,
@@ -534,13 +514,7 @@ trait BroadcastingTrait
         string $message = '',
     ): void {
         $items = TestQueueAdapter::getQueuedBulkBroadcastsByChannel($channel);
-        $found = false;
-        foreach ($items as $item) {
-            if (($item['event'] ?? null) === $event) {
-                $found = true;
-                break;
-            }
-        }
+        $found = array_any($items, fn(array $item): bool => ($item['event'] ?? null) === $event);
 
         $this->assertTrue(
             $found,

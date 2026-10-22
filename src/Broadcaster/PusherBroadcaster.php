@@ -360,7 +360,7 @@ class PusherBroadcaster extends BaseBroadcaster
             throw new BroadcastingException('JSON encode error for JSONP response', 500);
         }
 
-        return (new Response())
+        return new Response()
             ->withType('application/javascript')
             ->withStringBody($callback . '(' . $json . ');');
     }

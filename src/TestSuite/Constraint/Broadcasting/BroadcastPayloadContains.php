@@ -25,13 +25,7 @@ class BroadcastPayloadContains extends BroadcastConstraintBase
         $value = $other['value'];
         $broadcasts = $this->getBroadcasts();
 
-        foreach ($broadcasts as $broadcast) {
-            if ($broadcast['event'] === $event && (isset($broadcast['payload'][$key]) && $broadcast['payload'][$key] == $value)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($broadcasts, fn(array $broadcast): bool => $broadcast['event'] === $event && (isset($broadcast['payload'][$key]) && $broadcast['payload'][$key] == $value));
     }
 
     /**

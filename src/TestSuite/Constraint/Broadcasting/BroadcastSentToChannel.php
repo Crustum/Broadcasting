@@ -24,13 +24,7 @@ class BroadcastSentToChannel extends BroadcastConstraintBase
         $event = $other['event'];
         $broadcasts = $this->getBroadcasts();
 
-        foreach ($broadcasts as $broadcast) {
-            if (in_array($channel, $broadcast['channels']) && $broadcast['event'] === $event) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($broadcasts, fn(array $broadcast): bool => in_array($channel, $broadcast['channels']) && $broadcast['event'] === $event);
     }
 
     /**

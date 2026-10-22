@@ -42,6 +42,7 @@ class CachingTokenProvider implements TokenProviderInterface
      * Get the JWT, minting a fresh one when the cached token nears expiry.
      *
      * @return string Fresh or cached JWT
+     * @phpstan-impure
      */
     public function getJwt(): string
     {

@@ -24,13 +24,7 @@ class BroadcastSentViaConnection extends BroadcastConstraintBase
         $event = $other['event'];
         $broadcasts = $this->getBroadcasts();
 
-        foreach ($broadcasts as $broadcast) {
-            if ($broadcast['connection'] === $connection && $broadcast['event'] === $event) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($broadcasts, fn(array $broadcast): bool => $broadcast['connection'] === $connection && $broadcast['event'] === $event);
     }
 
     /**

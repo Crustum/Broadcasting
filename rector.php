@@ -22,6 +22,7 @@ use Rector\TypeDeclaration\Rector\FuncCall\AddArrayFunctionClosureParamTypeRecto
 use Rector\TypeDeclaration\Rector\FunctionLike\AddClosureParamTypeForArrayMapRector;
 use Rector\TypeDeclaration\Rector\FunctionLike\AddClosureParamTypeForArrayReduceRector;
 use Rector\TypeDeclaration\Rector\StmtsAwareInterface\SafeDeclareStrictTypesRector;
+use Rector\Php85\Rector\Property\AddOverrideAttributeToOverriddenPropertiesRector;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -29,6 +30,7 @@ return RectorConfig::configure()
         __DIR__ . '/tests',
     ])
     ->withSkip([
+        AddOverrideAttributeToOverriddenPropertiesRector::class,
         ReadOnlyPropertyRector::class,
         ClassPropertyAssignToConstructorPromotionRector::class,
         AddClosureParamTypeForArrayMapRector::class,
@@ -56,4 +58,4 @@ return RectorConfig::configure()
         typeDeclarations: true,
         earlyReturn: true,
     )
-    ->withPhpSets(php81: true);
+    ->withPhpSets(php85: true);

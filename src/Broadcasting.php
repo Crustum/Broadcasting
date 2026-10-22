@@ -153,7 +153,7 @@ class Broadcasting
      * @throws \RuntimeException If loading of the broadcaster failed.
      * @return void
      */
-    protected static function _buildBroadcaster(string $name): void
+    protected static function buildBroadcaster(string $name): void
     {
         $registry = static::getRegistry();
 
@@ -427,7 +427,7 @@ class Broadcasting
         }
 
         try {
-            static::_buildBroadcaster($connection);
+            static::buildBroadcaster($connection);
         } catch (InvalidBroadcasterException $invalidBroadcasterException) {
             if ($connection === 'default') {
                 $connection = Configure::read('Broadcasting.default') ?? 'null';

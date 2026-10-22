@@ -77,7 +77,7 @@ class MercureChannelEncrypterTest extends TestCase
     public function testEncryptRoundTripsThroughAStandardJweDecrypter(): void
     {
         $encrypter = new ChannelEncrypter($this->key());
-        $jwe = (new CompactSerializer())->unserialize(
+        $jwe = new CompactSerializer()->unserialize(
             $encrypter->encrypt('{"event":"Tick"}', 'private-encrypted-a'),
         );
 
