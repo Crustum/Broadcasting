@@ -105,7 +105,6 @@ class BroadcastingPlugin extends BasePlugin
     {
         $routes->plugin(
             'Crustum/Broadcasting',
-            ['path' => '/broadcasting'],
             function (RouteBuilder $builder): void {
 
                 $builder->connect('/auth', [
@@ -123,6 +122,7 @@ class BroadcastingPlugin extends BasePlugin
 
                 $builder->fallbacks();
             },
+            ['path' => '/broadcasting'],
         );
 
         parent::routes($routes);

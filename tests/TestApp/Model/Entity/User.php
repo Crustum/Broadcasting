@@ -15,7 +15,7 @@ class User extends Entity
      *
      * @var array<string, bool>
      */
-    protected array $_accessible = [
+    protected array $patchable = [
         'username' => true,
         'email' => true,
         'password' => true,

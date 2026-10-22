@@ -101,7 +101,7 @@ class BroadcastingBehavior extends Behavior
      *
      * @var array<string, mixed>
      */
-    protected array $_defaultConfig = [
+    protected array $defaultConfig = [
         'implementedFinders' => [],
         'events' => [
             'Model.afterSave' => 'saved',
@@ -122,17 +122,17 @@ class BroadcastingBehavior extends Behavior
             $this->setConfig('events', $config['events'], false);
         }
 
-        if (!$this->_table instanceof BroadcastingTraitInterface) {
+        if (!$this->table instanceof BroadcastingTraitInterface) {
             throw new LogicException(
                 sprintf(
                     'Table %s must use BroadcastingTrait and implement BroadcastingTraitInterface.',
-                    $this->_table::class,
+                    $this->table::class,
                 ),
             );
         }
 
         /** @var \Cake\ORM\Table&\Crustum\Broadcasting\Model\Interface\BroadcastingTraitInterface $table */
-        $table = $this->_table;
+        $table = $this->table;
 
         if (isset($config['enabled'])) {
             if ($config['enabled']) {
@@ -174,7 +174,7 @@ class BroadcastingBehavior extends Behavior
      */
     public function implementedEvents(): array
     {
-        return array_fill_keys(array_keys($this->_config['events']), 'handleEvent');
+        return array_fill_keys(array_keys($this->config['events']), 'handleEvent');
     }
 
     /**
@@ -191,7 +191,7 @@ class BroadcastingBehavior extends Behavior
         if ($eventName === 'Model.afterSave') {
             $broadcastEvent = $entity->isNew() ? 'created' : 'updated';
         } else {
-            $broadcastEvent = $this->_config['events'][$eventName];
+            $broadcastEvent = $this->config['events'][$eventName];
         }
 
         /** @var \Cake\ORM\Table&\Crustum\Broadcasting\Model\Interface\BroadcastingTraitInterface $table */

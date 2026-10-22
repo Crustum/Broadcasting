@@ -73,28 +73,28 @@ class Broadcasting
      *
      * @var bool
      */
-    protected static bool $_enabled = true;
+    protected static bool $enabled = true;
 
     /**
      * Broadcasting Registry used for creating and using broadcaster adapters.
      *
      * @var \Crustum\Broadcasting\Registry\BroadcasterRegistry
      */
-    protected static BroadcasterRegistry $_registry;
+    protected static BroadcasterRegistry $registry;
 
     /**
      * Queue adapter instance
      *
      * @var \Crustum\Broadcasting\Queue\QueueAdapterInterface
      */
-    protected static QueueAdapterInterface $_queueAdapter;
+    protected static QueueAdapterInterface $queueAdapter;
 
     /**
      * Whether channel callbacks have been loaded
      *
      * @var bool
      */
-    protected static bool $_channelsLoaded = false;
+    protected static bool $channelsLoaded = false;
 
     /**
      * Returns the Broadcasting Registry instance used for creating and using broadcaster adapters.
@@ -103,7 +103,7 @@ class Broadcasting
      */
     public static function getRegistry(): BroadcasterRegistry
     {
-        return static::$_registry ??= new BroadcasterRegistry();
+        return static::$registry ??= new BroadcasterRegistry();
     }
 
     /**
@@ -116,7 +116,7 @@ class Broadcasting
      */
     public static function setRegistry(BroadcasterRegistry $registry): void
     {
-        static::$_registry = $registry;
+        static::$registry = $registry;
     }
 
     /**
@@ -127,7 +127,7 @@ class Broadcasting
      */
     public static function setQueueAdapter(QueueAdapterInterface $queueAdapter): void
     {
-        static::$_queueAdapter = $queueAdapter;
+        static::$queueAdapter = $queueAdapter;
     }
 
     /**
@@ -137,11 +137,11 @@ class Broadcasting
      */
     public static function getQueueAdapter(): QueueAdapterInterface
     {
-        if (!isset(static::$_queueAdapter)) {
-            static::$_queueAdapter = new CakeQueueAdapter();
+        if (!isset(static::$queueAdapter)) {
+            static::$queueAdapter = new CakeQueueAdapter();
         }
 
-        return static::$_queueAdapter;
+        return static::$queueAdapter;
     }
 
     /**
@@ -157,13 +157,13 @@ class Broadcasting
     {
         $registry = static::getRegistry();
 
-        if (empty(static::$_config[$name]['className'])) {
+        if (empty(static::$config[$name]['className'])) {
             throw new InvalidBroadcasterException(
                 sprintf('The `%s` broadcasting configuration does not exist.', $name),
             );
         }
 
-        $config = static::$_config[$name];
+        $config = static::$config[$name];
 
         try {
             $registry->load($name, $config);
@@ -416,7 +416,7 @@ class Broadcasting
      */
     public static function get(string $connection = 'default'): BroadcasterInterface
     {
-        if (!static::$_enabled) {
+        if (!static::$enabled) {
             return new NullBroadcaster();
         }
 
@@ -468,7 +468,7 @@ class Broadcasting
      */
     public static function routes(): void
     {
-        if (static::$_channelsLoaded) {
+        if (static::$channelsLoaded) {
             return;
         }
 
@@ -482,7 +482,7 @@ class Broadcasting
             include $channelsFile;
         }
 
-        static::$_channelsLoaded = true;
+        static::$channelsLoaded = true;
     }
 
     /**
@@ -676,7 +676,7 @@ class Broadcasting
      */
     public static function enable(): void
     {
-        static::$_enabled = true;
+        static::$enabled = true;
     }
 
     /**
@@ -688,7 +688,7 @@ class Broadcasting
      */
     public static function disable(): void
     {
-        static::$_enabled = false;
+        static::$enabled = false;
     }
 
     /**
@@ -698,7 +698,7 @@ class Broadcasting
      */
     public static function enabled(): bool
     {
-        return static::$_enabled;
+        return static::$enabled;
     }
 
     /**
@@ -708,7 +708,7 @@ class Broadcasting
      */
     public static function configured(): array
     {
-        return array_keys(static::$_config);
+        return array_keys(static::$config);
     }
 
     /**
@@ -739,7 +739,7 @@ class Broadcasting
             throw new LogicException('If config is not null, key must be a string.');
         }
 
-        if (isset(static::$_config[$key])) {
+        if (isset(static::$config[$key])) {
             static::drop($key);
         }
 
@@ -758,7 +758,7 @@ class Broadcasting
             unset($config['engine']);
         }
 
-        static::$_config[$key] = $config;
+        static::$config[$key] = $config;
     }
 
     /**
@@ -771,7 +771,7 @@ class Broadcasting
     public static function initFromConfigure(array $connections): void
     {
         foreach ($connections as $name => $config) {
-            static::$_config[$name] ??= $config;
+            static::$config[$name] ??= $config;
         }
     }
 }

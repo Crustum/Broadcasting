@@ -199,13 +199,13 @@ class ChannelCommandTest extends TestCase
     public function testGetPath(): void
     {
         $command = new ChannelCommand();
-        $args = $this->createStub(Arguments::class);
-        $args->method('getOption')->willReturn(null);
+        $args = new Arguments([], [], []);
+        $command->setArgs($args);
 
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getPath');
 
-        $path = $method->invoke($command, $args);
+        $path = $method->invoke($command);
         $this->assertStringContainsString('Broadcasting', $path);
     }
 }

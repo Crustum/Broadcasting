@@ -26,7 +26,7 @@ class BroadcasterRegistry extends ObjectRegistry
      * @param string $class Partial classname to resolve.
      * @return class-string<\Crustum\Broadcasting\Broadcaster\BroadcasterInterface>|null Either the correct classname or null.
      */
-    protected function _resolveClassName(string $class): ?string
+    protected function resolveClassName(string $class): ?string
     {
         /** @var class-string<\Crustum\Broadcasting\Broadcaster\BroadcasterInterface>|null */
         return App::className($class, 'Broadcaster', 'Broadcaster');
@@ -42,7 +42,7 @@ class BroadcasterRegistry extends ObjectRegistry
      * @return void
      * @throws \BadMethodCallException
      */
-    protected function _throwMissingClassError(string $class, ?string $plugin): void
+    protected function throwMissingClassError(string $class, ?string $plugin): void
     {
         throw new BadMethodCallException(sprintf('Broadcaster engine `%s` is not available.', $class));
     }
@@ -58,7 +58,7 @@ class BroadcasterRegistry extends ObjectRegistry
      * @return \Crustum\Broadcasting\Broadcaster\BroadcasterInterface The constructed BroadcasterInterface class.
      * @throws \Cake\Core\Exception\CakeException When the broadcaster cannot be initialized.
      */
-    protected function _create(object|string $class, string $alias, array $config): BroadcasterInterface
+    protected function create(object|string $class, string $alias, array $config): BroadcasterInterface
     {
         $instance = is_object($class) ? $class : new $class($config);
         unset($config['className']);
@@ -81,9 +81,9 @@ class BroadcasterRegistry extends ObjectRegistry
      * @param string $name The broadcaster name.
      * @return $this
      */
-    public function unload(string $name)
+    public function unload(string $name): static
     {
-        unset($this->_loaded[$name]);
+        unset($this->loaded[$name]);
 
         return $this;
     }

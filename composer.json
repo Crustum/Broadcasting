@@ -10,16 +10,16 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
-        "cakephp/cakephp": "^5.1",
+        "php": ">=8.5",
+        "cakephp/cakephp": "6.x-dev",
         "cakephp/authentication": "*",
         "cakephp/authorization": "*",
-        "cakephp/queue": "^2.2|3.x-dev",
+        "cakephp/queue": "4.x-dev",
         "guzzlehttp/psr7": "^2.6",
         "pusher/pusher-php-server": "^7.2",
-        "symfony/routing": "^6.0|^7.3",
-        "symfony/http-foundation": "^6.0|^7.0",
-        "symfony/config": "^6.0|^7.0"
+        "symfony/routing": "^6.3|^7.3|^8.0",
+        "symfony/http-foundation": "^6.3|^7.0|^8.0",
+        "symfony/config": "^6.3|^7.0|^8.0"
     },
     "suggest": {
         "crustum/plugin-manifest": "CakePHP plugin installer",
@@ -30,11 +30,10 @@
     },
     "require-dev": {
         "boundwize/structarmed": "^0.15",
-        "cakedc/cakephp-phpstan": "^4.3",
-        "cakephp/bake": "^3.0",
-        "cakephp/cakephp-codesniffer": "^5.3",
-        "crustum/debug-bar": "dev-main",
-        "crustum/plugin-manifest": "^1.2",
+        "cakedc/cakephp-phpstan": "5.next-cake6-dev",
+        "cakephp/bake": "4.x-dev",
+        "cakephp/cakephp-codesniffer": "6.x-dev",
+        "crustum/plugin-manifest": "2.x-dev",
         "phpstan/phpstan": "^2.3",
         "phpunit/phpunit": "^10.5.5 || ^11.1.3 || ^12.5.0 | ^13.0",
         "ratchet/pawl": "^0.4",
@@ -94,5 +93,11 @@
             "dealerdirect/phpcodesniffer-composer-installer": true
         },
         "platform-check": false
-    }
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../Queue"
+        }
+    ]
 }

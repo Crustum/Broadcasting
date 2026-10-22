@@ -39,34 +39,27 @@ class ChannelCommand extends BakeCommand
      * @param \Cake\Console\ConsoleIo $io The console io
      * @return int|null The exit code or null for success
      */
-    public function execute(Arguments $args, ConsoleIo $io): ?int
+    public function execute(): ?int
     {
-        $name = $args->getArgumentAt(0);
-
+        $name = $this->args->getArgumentAt(0);
         if (empty($name)) {
-            $io->err('<error>You must provide a channel name.</error>');
-            $io->out('Example: bin/cake bake channel Order');
+            $this->io->err('<error>You must provide a channel name.</error>');
+            $this->io->out('Example: bin/cake bake channel Order');
 
             return static::CODE_ERROR;
         }
-
-        $name = $this->_getName($name);
-
+        $name = $this->getNameWithoutPrefix($name);
         // Ensure Channel suffix
         if (!str_ends_with($name, 'Channel')) {
             $name .= 'Channel';
         }
-
-        $content = $this->getContent($name, $args, $io);
-
+        $content = $this->getContent($name);
         if (empty($content)) {
-            $io->err("<warning>No generated content for '{$name}', not generating template.</warning>");
+            $this->io->err("<warning>No generated content for '{$name}', not generating template.</warning>");
 
             return static::CODE_ERROR;
         }
-
-        $this->bake($name, $args, $io, $content);
-
+        $this->bake($name, $content);
         return static::CODE_SUCCESS;
     }
 
@@ -79,24 +72,24 @@ class ChannelCommand extends BakeCommand
      * @param string|true $content Content to write.
      * @return void
      */
-    public function bake(string $name, Arguments $args, ConsoleIo $io, string|bool $content): void
+    public function bake(string $name, string|bool $content): void
     {
-        $path = $this->getPath($args);
+        $path = $this->getPath();
         $filename = $path . $name . '.php';
-        $io->out("\n" . sprintf('Baking channel class for %s...', $name), 1, ConsoleIo::QUIET);
+        $this->io->out("\n" . sprintf('Baking channel class for %s...', $name), 1, ConsoleIo::QUIET);
 
-        if (is_string($content) && $args->getOption('verbose')) {
-            $io->out($content);
+        if (is_string($content) && $this->args->getOption('verbose')) {
+            $this->io->out($content);
         }
 
         if (is_string($content)) {
-            $forceOption = $args->getOption('force');
+            $forceOption = $this->args->getOption('force');
             $force = is_bool($forceOption) && $forceOption;
-            $io->createFile($filename, $content, $force);
+            $this->io->createFile($filename, $content, $force);
         }
 
         $emptyFile = $path . '.gitkeep';
-        $this->deleteEmptyFile($emptyFile, $io);
+        $this->deleteEmptyFile($emptyFile);
     }
 
     /**
@@ -107,11 +100,11 @@ class ChannelCommand extends BakeCommand
      * @param \Cake\Console\ConsoleIo $io Console io
      * @return string|bool Generated content
      */
-    public function getContent(string $name, Arguments $args, ConsoleIo $io): string|bool
+    public function getContent(string $name): string|bool
     {
         $namespace = Configure::read('App.namespace');
         if ($this->plugin) {
-            $namespace = $this->_pluginNamespace($this->plugin);
+            $namespace = $this->pluginNamespace($this->plugin);
         }
 
         $channelName = $this->getChannelNameFromClass($name);
@@ -126,7 +119,7 @@ class ChannelCommand extends BakeCommand
             'namespacedUserModel' => $namespacedUserModel,
         ];
 
-        $themeOption = $args->getOption('theme');
+        $themeOption = $this->args->getOption('theme');
         $theme = is_string($themeOption) ? $themeOption : null;
         $renderer = new TemplateRenderer($theme);
         $renderer->set('plugin', $this->plugin);
@@ -142,18 +135,16 @@ class ChannelCommand extends BakeCommand
      * @param \Cake\Console\Arguments $args Arguments instance to read the prefix option from.
      * @return string Path to output.
      */
-    public function getPath(Arguments $args): string
+    public function getPath(): string
     {
         $path = APP . $this->pathFragment;
         if ($this->plugin) {
-            $path = $this->_pluginPath($this->plugin) . 'src/' . $this->pathFragment;
+            $path = $this->pluginPath($this->plugin) . 'src/' . $this->pathFragment;
         }
-
-        $prefix = $this->getPrefix($args);
+        $prefix = $this->getPrefix();
         if ($prefix !== '' && $prefix !== '0') {
             $path .= $prefix . DIRECTORY_SEPARATOR;
         }
-
         return str_replace('/', DIRECTORY_SEPARATOR, $path);
     }
 
@@ -165,7 +156,7 @@ class ChannelCommand extends BakeCommand
      */
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
-        $parser = $this->_setCommonOptions($parser);
+        $parser = $this->setCommonOptions($parser);
         $parser->setDescription('Bake Channel authorization class.')
             ->addArgument('name', [
                 'help' => 'Name of the channel class to generate (e.g., Order, UserNotification). "Channel" suffix will be added automatically.',

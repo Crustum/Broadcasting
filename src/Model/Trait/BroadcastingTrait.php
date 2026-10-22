@@ -38,49 +38,49 @@ trait BroadcastingTrait
      *
      * @var bool
      */
-    private bool $_broadcastingEnabled = true;
+    private bool $broadcastingEnabled = true;
 
     /**
      * Broadcasting channels configuration
      *
      * @var \Closure|array<mixed>|null
      */
-    private Closure|array|null $_broadcastingChannels = null;
+    private Closure|array|null $broadcastingChannels = null;
 
     /**
      * Broadcasting payload configuration
      *
      * @var \Cake\Datasource\EntityInterface|\Closure|array<string, mixed>|null
      */
-    private Closure|array|EntityInterface|null $_broadcastingPayload = null;
+    private Closure|array|EntityInterface|null $broadcastingPayload = null;
 
     /**
      * Broadcasting connection configuration
      *
      * @var \Closure|string|null
      */
-    private Closure|string|null $_broadcastingConnection = 'default';
+    private Closure|string|null $broadcastingConnection = 'default';
 
     /**
      * Broadcasting queue configuration
      *
      * @var string|null
      */
-    private ?string $_broadcastingQueue = null;
+    private ?string $broadcastingQueue = null;
 
     /**
      * Broadcasting event name configuration
      *
      * @var \Closure|string|null
      */
-    private Closure|string|null $_broadcastingEventName = null;
+    private Closure|string|null $broadcastingEventName = null;
 
     /**
      * Broadcasting events configuration
      *
      * @var array<string, bool>
      */
-    private array $_broadcastingEvents = [
+    private array $broadcastingEvents = [
         'created' => true,
         'updated' => true,
         'deleted' => true,
@@ -95,11 +95,11 @@ trait BroadcastingTrait
      */
     public function broadcastEvent(EntityInterface $entity, string $event): void
     {
-        if (!$this->_broadcastingEnabled) {
+        if (!$this->broadcastingEnabled) {
             return;
         }
 
-        if (isset($this->_broadcastingEvents[$event]) && !$this->_broadcastingEvents[$event]) {
+        if (isset($this->broadcastingEvents[$event]) && !$this->broadcastingEvents[$event]) {
             return;
         }
 
@@ -110,7 +110,7 @@ trait BroadcastingTrait
         if (!empty($channels)) {
             $eventName = $this->getEventName($entity, $event);
             $connectionName = $connection ?? 'default';
-            $queue = $this->_broadcastingQueue;
+            $queue = $this->broadcastingQueue;
 
             $pending = Broadcasting::to($channels)
                 ->event($eventName)
@@ -132,7 +132,7 @@ trait BroadcastingTrait
      */
     public function enableBroadcasting(): void
     {
-        $this->_broadcastingEnabled = true;
+        $this->broadcastingEnabled = true;
     }
 
     /**
@@ -142,7 +142,7 @@ trait BroadcastingTrait
      */
     public function disableBroadcasting(): void
     {
-        $this->_broadcastingEnabled = false;
+        $this->broadcastingEnabled = false;
     }
 
     /**
@@ -152,7 +152,7 @@ trait BroadcastingTrait
      */
     public function isBroadcastingEnabled(): bool
     {
-        return $this->_broadcastingEnabled;
+        return $this->broadcastingEnabled;
     }
 
     /**
@@ -163,7 +163,7 @@ trait BroadcastingTrait
      */
     public function setBroadcastChannels(Closure|array|null $channels): void
     {
-        $this->_broadcastingChannels = $channels;
+        $this->broadcastingChannels = $channels;
     }
 
     /**
@@ -174,7 +174,7 @@ trait BroadcastingTrait
      */
     public function setBroadcastPayload(Closure|array|EntityInterface|null $payload): void
     {
-        $this->_broadcastingPayload = $payload;
+        $this->broadcastingPayload = $payload;
     }
 
     /**
@@ -185,7 +185,7 @@ trait BroadcastingTrait
      */
     public function setBroadcastConnection(string|Closure|null $connection): void
     {
-        $this->_broadcastingConnection = $connection;
+        $this->broadcastingConnection = $connection;
     }
 
     /**
@@ -196,7 +196,7 @@ trait BroadcastingTrait
      */
     public function setBroadcastQueue(?string $queue): void
     {
-        $this->_broadcastingQueue = $queue;
+        $this->broadcastingQueue = $queue;
     }
 
     /**
@@ -207,7 +207,7 @@ trait BroadcastingTrait
      */
     public function setBroadcastEventName(Closure|string|null $eventName): void
     {
-        $this->_broadcastingEventName = $eventName;
+        $this->broadcastingEventName = $eventName;
     }
 
     /**
@@ -218,7 +218,7 @@ trait BroadcastingTrait
      */
     public function setBroadcastEvents(array $events): void
     {
-        $this->_broadcastingEvents = $events;
+        $this->broadcastingEvents = $events;
     }
 
     /**
@@ -229,7 +229,7 @@ trait BroadcastingTrait
      */
     public function enableBroadcastEvent(string $event): void
     {
-        $this->_broadcastingEvents[$event] = true;
+        $this->broadcastingEvents[$event] = true;
     }
 
     /**
@@ -240,7 +240,7 @@ trait BroadcastingTrait
      */
     public function disableBroadcastEvent(string $event): void
     {
-        $this->_broadcastingEvents[$event] = false;
+        $this->broadcastingEvents[$event] = false;
     }
 
     /**
@@ -252,7 +252,7 @@ trait BroadcastingTrait
      */
     private function getBroadcastChannels(EntityInterface $entity, string $event): array
     {
-        $channels = $this->_broadcastingChannels;
+        $channels = $this->broadcastingChannels;
 
         if ($channels instanceof Closure) {
             $result = $channels($entity, $event);
@@ -302,7 +302,7 @@ trait BroadcastingTrait
      */
     private function getBroadcastPayload(EntityInterface $entity, string $event): array
     {
-        $payload = $this->_broadcastingPayload;
+        $payload = $this->broadcastingPayload;
 
         if ($payload instanceof Closure) {
             return $payload($entity, $event);
@@ -330,7 +330,7 @@ trait BroadcastingTrait
      */
     private function getBroadcastConnection(EntityInterface $entity): ?string
     {
-        $connection = $this->_broadcastingConnection;
+        $connection = $this->broadcastingConnection;
 
         if ($connection instanceof Closure) {
             return $connection($entity);
@@ -348,7 +348,7 @@ trait BroadcastingTrait
      */
     private function getEventName(EntityInterface $entity, string $event): string
     {
-        $eventNameConfig = $this->_broadcastingEventName;
+        $eventNameConfig = $this->broadcastingEventName;
 
         if ($eventNameConfig instanceof Closure) {
             $result = $eventNameConfig($entity, $event);

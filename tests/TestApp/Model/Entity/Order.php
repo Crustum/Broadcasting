@@ -22,7 +22,7 @@ class Order extends Entity
      *
      * @var array<string, bool>
      */
-    protected array $_accessible = [
+    protected array $patchable = [
         'user_id' => true,
         'total' => true,
         'status' => true,

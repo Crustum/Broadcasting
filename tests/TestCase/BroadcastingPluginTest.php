@@ -193,8 +193,8 @@ class BroadcastingPluginTest extends TestCase
             ->method('plugin')
             ->with(
                 $this->equalTo('Crustum/Broadcasting'),
-                $this->equalTo(['path' => '/broadcasting']),
                 $this->isInstanceOf('Closure'),
+                $this->equalTo(['path' => '/broadcasting']),
             );
 
         $plugin = new BroadcastingPlugin();

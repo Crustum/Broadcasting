@@ -27,8 +27,8 @@ class BroadcastingAuthControllerTest extends TestCase
      */
     private function getResponseBody(): array
     {
-        $this->assertNotNull($this->_response);
-        $body = $this->_response->getBody();
+        $this->assertNotNull($this->response);
+        $body = $this->response->getBody();
 
         $decoded = json_decode((string)$body, true);
         $this->assertIsArray($decoded);
@@ -59,7 +59,7 @@ class BroadcastingAuthControllerTest extends TestCase
         Broadcasting::getRegistry()->reset();
 
         $reflection = new ReflectionClass(Broadcasting::class);
-        $property = $reflection->getProperty('_channelsLoaded');
+        $property = $reflection->getProperty('channelsLoaded');
         $property->setValue(null, false);
     }
 

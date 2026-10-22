@@ -27,7 +27,7 @@ class BroadcastingTraitTest extends TestCase
      * @var array<string>
      */
     protected array $fixtures = [
-        'plugin.Crustum\Broadcasting.Users',
+        'plugin.Crustum/Broadcasting.Users',
     ];
 
     /**
@@ -51,7 +51,7 @@ class BroadcastingTraitTest extends TestCase
         Broadcasting::getRegistry()->reset();
 
         $reflection = new ReflectionClass(Broadcasting::class);
-        $property = $reflection->getProperty('_channelsLoaded');
+        $property = $reflection->getProperty('channelsLoaded');
         $property->setValue(null, false);
     }
 
