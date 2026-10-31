@@ -10,7 +10,7 @@ The plugin integrates seamlessly with CakePHP's event system and provides comman
 
 ## Requirements
 
-* PHP 8.2+
+* PHP 8.5+
 
 See [Versions.md](docs/Versions.md) for the supported CakePHP versions.
 

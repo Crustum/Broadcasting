@@ -80,7 +80,6 @@
         "test:integration": "phpunit --testsuite=Integration",
         "test:coverage": "phpunit --coverage-html coverage",
         "stan": "vendor/bin/phpstan analyse src/ tests/",
-        "psalm": "tools/psalm --show-info=false",
         "rector-check": "vendor/bin/rector process --dry-run",
         "rector-fix": "vendor/bin/rector process",
         "stan-tests": "vendor/bin/phpstan analyze -c tests/phpstan.neon",
