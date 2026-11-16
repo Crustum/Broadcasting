@@ -7,6 +7,9 @@ use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\RedisBroadcaster;
 use Crustum\Broadcasting\Exception\BroadcastingException;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 use Redis;
 
 /**
@@ -16,6 +19,9 @@ use Redis;
  */
 class RedisBroadcasterTest extends TestCase
 {
+    use VerifiesDoubles;
+
+    /**
     /**
      * Test subject
      *
@@ -269,12 +275,11 @@ class RedisBroadcasterTest extends TestCase
      */
     public function testBulkBroadcastUsesPersonalizedLuaScript(): void
     {
-        $redis = $this->createMock(Redis::class);
-        $redis->expects($this->once())
-            ->method('eval')
+        $redis = Double::for(Redis::class);
+        $redis->expects('eval')
             ->with(
-                $this->stringContains('ARGV[i + 1]'),
-                $this->callback(fn(array $args): bool => count($args) === 4
+                Argument::satisfies(fn($script): bool => is_string($script) && str_contains($script, 'ARGV[i + 1]')),
+                Argument::satisfies(fn($args): bool => is_array($args) && count($args) === 4
                     && $args[0] === 'user.1'
                     && $args[2] === 'user.2'
                     && is_string($args[1])
@@ -313,10 +318,10 @@ class RedisBroadcasterTest extends TestCase
      */
     public function testBulkBroadcastChunksEvalCalls(): void
     {
-        $redis = $this->createMock(Redis::class);
-        $redis->expects($this->exactly(2))
-            ->method('eval')
-            ->willReturn(1);
+        $redis = Double::for(Redis::class);
+        $redis->expects('eval')
+            ->times(2)
+            ->returns(1);
 
         $broadcaster = new TestableRedisBroadcaster([
             'connection' => 'default',
@@ -348,8 +353,8 @@ class RedisBroadcasterTest extends TestCase
      */
     public function testBulkBroadcastWithEmptyList(): void
     {
-        $redis = $this->createMock(Redis::class);
-        $redis->expects($this->never())->method('eval');
+        $redis = Double::for(Redis::class);
+        $redis->expects('eval')->never();
 
         $broadcaster = new TestableRedisBroadcaster([
             'connection' => 'default',

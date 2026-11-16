@@ -11,6 +11,7 @@ use Cake\Http\Response;
 use Cake\Http\ServerRequest;
 use Closure;
 use Crustum\Broadcasting\Exception\BroadcastingException;
+use Crustum\Broadcasting\Exception\InvalidChannelException;
 use Crustum\Broadcasting\Trait\PusherChannelConventionsTrait;
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
@@ -103,6 +104,11 @@ class PusherBroadcaster extends BaseBroadcaster
      */
     public function auth(ServerRequestInterface $request): array|Response
     {
+        $rawChannelName = $this->getRawChannelNameFromRequest($request);
+        if ($rawChannelName !== null && !is_string($rawChannelName)) {
+            throw InvalidChannelException::unauthorized('invalid-channel-name');
+        }
+
         $channelName = $this->getChannelNameFromRequest($request);
         $socketId = $this->getSocketIdFromRequest($request);
 
@@ -192,10 +198,16 @@ class PusherBroadcaster extends BaseBroadcaster
 
         $parameters = $socket !== null ? ['socket_id' => $socket] : [];
 
-        $channelsCollection = new Collection($channels);
-        $channelsCollection->chunk(100)->each(function ($channelChunk) use ($event, $payload, $parameters): void {
+        $channelCollection = new Collection($channels);
+        $isEncrypted = fn(string $channel): bool => str_starts_with($channel, 'private-encrypted-');
+
+        $channelCollection->reject($isEncrypted)->chunk(100)->each(function ($channelChunk) use ($event, $payload, $parameters): void {
             $channelArray = is_array($channelChunk) ? $channelChunk : $channelChunk->toArray();
-            $this->pusherClient->trigger($channelArray, $event, $payload, $parameters);
+            $this->pusherClient->trigger(array_values($channelArray), $event, $payload, $parameters);
+        });
+
+        $channelCollection->filter($isEncrypted)->each(function (string $channel) use ($event, $payload, $parameters): void {
+            $this->pusherClient->trigger([$channel], $event, $payload, $parameters);
         });
     }
 

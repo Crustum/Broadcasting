@@ -32,4 +32,18 @@ interface QueueAdapterInterface
      * @return string Unique job ID
      */
     public function getUniqueId(string $eventName, string $type, array $data = []): string;
+
+    /**
+     * Check whether pushing the given unique job would be skipped as a duplicate.
+     *
+     * Mirrors the deduplication check the backend performs in `push()` without
+     * enqueueing anything. Returns false when the job class does not opt into
+     * uniqueness or when the backend cannot express a uniqueness window.
+     *
+     * @param string $jobClass Job class name
+     * @param array<string, mixed> $data Job data
+     * @param array<string, mixed> $options Job options
+     * @return bool True when an identical unique job is already queued
+     */
+    public function isDuplicate(string $jobClass, array $data = [], array $options = []): bool;
 }

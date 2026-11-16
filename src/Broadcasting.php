@@ -7,6 +7,8 @@ use BackedEnum;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\StaticConfigTrait;
+use Cake\Event\Event;
+use Cake\Event\EventManager;
 use Cake\Log\Log;
 use Crustum\Broadcasting\Broadcaster\BaseBroadcaster;
 use Crustum\Broadcasting\Broadcaster\BroadcasterInterface;
@@ -646,6 +648,18 @@ class Broadcasting
         }
 
         $jobClass = $unique ? UniqueBroadcastJob::class : BroadcastJob::class;
+
+        if ($unique && static::getQueueAdapter()->isDuplicate($jobClass, $jobData, $options)) {
+            EventManager::instance()->dispatch(new Event(BroadcastingPlugin::EVENT_UNIQUE_SKIPPED, null, [
+                'jobClass' => $jobClass,
+                'eventName' => $event,
+                'channels' => $channelArray,
+                'payload' => $payload,
+                'connection' => $config,
+            ]));
+
+            return;
+        }
 
         try {
             static::getQueueAdapter()->push($jobClass, $jobData, $options);

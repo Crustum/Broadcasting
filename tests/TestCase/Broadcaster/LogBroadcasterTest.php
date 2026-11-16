@@ -7,6 +7,8 @@ use Cake\Log\Engine\ArrayLog;
 use Cake\Log\Log;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\LogBroadcaster;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 
@@ -17,6 +19,8 @@ use Psr\Http\Message\UriInterface;
  */
 class LogBroadcasterTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * Array log engine name used by tests that capture messages.
      *
@@ -180,13 +184,13 @@ class LogBroadcasterTest extends TestCase
      */
     private function createMockRequest(): ServerRequestInterface
     {
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('__toString')->willReturn('http://example.com/test');
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('__toString')->returns('http://example.com/test');
 
-        $request = $this->createStub(ServerRequestInterface::class);
-        $request->method('getUri')->willReturn($uri);
-        $request->method('getMethod')->willReturn('POST');
-        $request->method('getHeaders')->willReturn([]);
+        $request = Double::for(ServerRequestInterface::class);
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getMethod')->returns('POST');
+        $request->allows('getHeaders')->returns([]);
 
         return $request;
     }

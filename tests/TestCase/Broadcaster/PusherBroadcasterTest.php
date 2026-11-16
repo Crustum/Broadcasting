@@ -11,7 +11,10 @@ use Crustum\Broadcasting\Broadcaster\PusherBroadcaster;
 use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidChannelException;
 use Exception;
-use PHPUnit\Framework\MockObject\MockObject;
+use JMac\Testing\Double;
+use JMac\Testing\DoubleInterface;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 use Pusher\Pusher;
 use ReflectionClass;
 use TestApp\Broadcasting\InvalidChannel;
@@ -26,6 +29,8 @@ use TestApp\Broadcasting\UnauthorizedChannel;
  */
 class PusherBroadcasterTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * Fixtures
      *
@@ -43,17 +48,17 @@ class PusherBroadcasterTest extends TestCase
      */
     protected function createPusherStub(): Pusher
     {
-        return $this->createStub(Pusher::class);
+        return Double::for(Pusher::class);
     }
 
     /**
      * Create Pusher mock for method configuration.
      *
-     * @return \Pusher\Pusher&\PHPUnit\Framework\MockObject\MockObject
+     * @return \Pusher\Pusher&DoubleInterface
      */
-    protected function createPusherMock(): Pusher
+    protected function createPusherMock(): Pusher&DoubleInterface
     {
-        return $this->createMock(Pusher::class);
+        return Double::for(Pusher::class);
     }
 
     /**
@@ -76,21 +81,22 @@ class PusherBroadcasterTest extends TestCase
     }
 
     /**
-     * Create PusherBroadcaster with partial mock for method stubbing.
+     * Create PusherBroadcaster with a passthru double for method stubbing.
+     *
+     * Unconfigured methods run for real. `$methodsToStub` is retained for
+     * signature compatibility and documents which methods the test configures.
      *
      * @param array<string, mixed> $config Configuration array
-     * @param list<non-empty-string> $methodsToStub Methods to stub
+     * @param list<non-empty-string> $methodsToStub Methods the test stubs
      * @param \Pusher\Pusher|null $pusher Pusher client stub
-     * @return \Crustum\Broadcasting\Broadcaster\PusherBroadcaster&\PHPUnit\Framework\MockObject\MockObject
+     * @return \Crustum\Broadcasting\Test\TestCase\Broadcaster\TestablePusherBroadcaster&DoubleInterface
      */
-    protected function createPusherBroadcasterWithMock(array $config, array $methodsToStub, ?Pusher $pusher = null): MockObject
+    protected function createPusherBroadcasterWithMock(array $config, array $methodsToStub, ?Pusher $pusher = null): TestablePusherBroadcaster&DoubleInterface
     {
         $pusher ??= $this->createPusherStub();
-        /** @var list<non-empty-string> $methodsToStub */
-        $broadcaster = $this->getMockBuilder(TestablePusherBroadcaster::class)
-            ->setConstructorArgs([$config])
-            ->onlyMethods($methodsToStub)
-            ->getMock();
+
+        $broadcaster = Double::for(TestablePusherBroadcaster::class);
+        $broadcaster->passthru(new TestablePusherBroadcaster($config));
 
         $reflection = new ReflectionClass($broadcaster);
         $pusherClientProperty = $reflection->getProperty('pusherClient');
@@ -273,10 +279,9 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
+        $pusher->expects('authorizeChannel')
             ->with('private-test', '123.456')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -310,23 +315,23 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizePresenceChannel')
-            ->with('presence-test', '123.456', '1', $this->anything())
-            ->willReturn('{"auth":"test-key:test-signature","channel_data":"{\"user_info\":{\"id\":1,\"name\":\"Test User\"}}"}');
+        $pusher->expects('authorizePresenceChannel')
+            ->with('presence-test', '123.456', '1', Argument::any())
+            ->returns('{"auth":"test-key:test-signature","channel_data":"{\"user_info\":{\"id\":1,\"name\":\"Test User\"}}"}');
 
-        $mockEntity = $this->createStub(EntityInterface::class);
-        $mockEntity->method('get')
-            ->willReturnMap([
-                ['id', 1],
-                ['full_name', 'Test User'],
-                ['username', 'testuser'],
-            ]);
+        $mockEntity = Double::for(EntityInterface::class);
+        $mockEntity->allows('get')->with('id')->returns(1);
+        $mockEntity->allows('get')->with('full_name')->returns('Test User');
+        $mockEntity->allows('get')->with('username')->returns('testuser');
+        // ArrayAccess::offsetExists() carries only a tentative bool return,
+        // which Double cannot infer a safe default for — stub the PHPUnit
+        // `createStub` equivalent (false) explicitly.
+        $mockEntity->allows('offsetExists')->returns(false);
 
         $broadcaster = $this->createPusherBroadcasterWithMock($config, ['resolveUserFromRequest'], $pusher);
-        $broadcaster->expects($this->atLeastOnce())
-            ->method('resolveUserFromRequest')
-            ->willReturn($mockEntity);
+        $broadcaster->expects('resolveUserFromRequest')
+            ->times(minimum: 1)
+            ->returns($mockEntity);
 
         $broadcaster->setChannelCallbacks(['presence-test' => fn($user): true => true]);
 
@@ -388,10 +393,9 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
+        $pusher->expects('authorizeChannel')
             ->with('private-test', '123.456')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -422,9 +426,8 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('trigger')
-            ->willReturn((object)['status' => 200]);
+        $pusher->expects('trigger')
+            ->returns((object)['status' => 200]);
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -449,8 +452,7 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->never())
-            ->method('trigger');
+        $pusher->expects('trigger')->never();
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -475,9 +477,8 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('trigger')
-            ->willReturn((object)['status' => 200]);
+        $pusher->expects('trigger')
+            ->returns((object)['status' => 200]);
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -486,6 +487,71 @@ class PusherBroadcasterTest extends TestCase
         $payload = ['message' => 'Hello World', 'timestamp' => time()];
 
         $broadcaster->broadcast($channels, $event, $payload);
+    }
+
+    /**
+     * Test encrypted channels are triggered one channel at a time.
+     *
+     * The Pusher SDK encrypts `private-encrypted-` channels per call, so they
+     * cannot share a multi-channel `trigger()` with plain channels.
+     *
+     * @return void
+     */
+    public function testBroadcastTriggersEncryptedChannelsSeparately(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+        ];
+
+        $triggerCalls = [];
+        $pusher = $this->createPusherMock();
+        $pusher->expects('trigger')
+            ->times(3)
+            ->resolves(function (mixed ...$args) use (&$triggerCalls): object {
+                $triggerCalls[] = $args[0];
+
+                return (object)['status' => 200];
+            });
+
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+
+        $broadcaster->broadcast(
+            ['private-a', 'private-encrypted-c', 'b', 'private-encrypted-d'],
+            'test-event',
+            ['foo' => 'bar'],
+        );
+
+        $this->assertSame([['private-a', 'b'], ['private-encrypted-c'], ['private-encrypted-d']], $triggerCalls);
+    }
+
+    /**
+     * Test auth rejects a non-string channel name with a 403.
+     *
+     * @return void
+     */
+    public function testAuthRejectsArrayChannelName(): void
+    {
+        $config = [
+            'app_id' => 'test-app-id',
+            'key' => 'test-key',
+            'secret' => 'test-secret',
+        ];
+
+        $pusher = $this->createPusherStub();
+        $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
+
+        $request = new ServerRequest();
+        $request = $request->withParsedBody([
+            'channel_name' => ['private-test'],
+            'socket_id' => 'test-socket-id',
+        ]);
+
+        $this->expectException(InvalidChannelException::class);
+        $this->expectExceptionCode(403);
+
+        $broadcaster->auth($request);
     }
 
     /**
@@ -502,9 +568,8 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('trigger')
-            ->willReturn((object)['status' => 200]);
+        $pusher->expects('trigger')
+            ->returns((object)['status' => 200]);
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -553,17 +618,13 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
+        $pusher->expects('authorizeChannel')
             ->with('orders.123', '123.456')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+            ->returns('{"auth":"test-key:test-signature"}');
 
-        $mockUser = $this->createStub(EntityInterface::class);
-        $mockUser->method('get')
-            ->willReturnMap([
-                ['id', 1],
-                ['name', 'Test User'],
-            ]);
+        $mockUser = Double::for(EntityInterface::class);
+        $mockUser->allows('get')->with('id')->returns(1);
+        $mockUser->allows('get')->with('name')->returns('Test User');
 
         $broadcaster = $this->createPusherBroadcasterWithMock(
             $config,
@@ -571,13 +632,11 @@ class PusherBroadcasterTest extends TestCase
             $pusher,
         );
 
-        $broadcaster->expects($this->once())
-            ->method('retrieveUserFromCakeRequest')
-            ->willReturn($mockUser);
+        $broadcaster->expects('retrieveUserFromCakeRequest')
+            ->returns($mockUser);
 
-        $broadcaster->expects($this->once())
-            ->method('getTableLocator')
-            ->willReturn($this->getTableLocator());
+        $broadcaster->expects('getTableLocator')
+            ->returns($this->getTableLocator());
 
         $broadcaster->registerChannel('orders.{order}', TestOrderChannel::class);
 
@@ -608,26 +667,25 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizePresenceChannel')
-            ->with('presence-rooms.456', '123.456', '1', $this->anything())
-            ->willReturn('{"auth":"test-key:test-signature","channel_data":"{\"user_info\":{\"id\":1,\"name\":\"Test User\",\"email\":\"test@example.com\"}}"}');
+        $pusher->expects('authorizePresenceChannel')
+            ->with('presence-rooms.456', '123.456', '1', Argument::any())
+            ->returns('{"auth":"test-key:test-signature","channel_data":"{\"user_info\":{\"id\":1,\"name\":\"Test User\",\"email\":\"test@example.com\"}}"}');
 
-        $mockUser = $this->createStub(EntityInterface::class);
-        $mockUser->method('get')
-            ->willReturnCallback(fn($field): int|string|null => match ($field) {
-                'id' => 1,
-                'name' => 'Test User',
-                'email' => 'test@example.com',
-                default => null,
-            });
+        $mockUser = Double::for(EntityInterface::class);
+        $mockUser->allows('get')->resolves(fn(mixed ...$args): int|string|null => match ($args[0] ?? null) {
+            'id' => 1,
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            default => null,
+        });
+        // ArrayAccess::offsetExists() carries only a tentative bool return,
+        // which Double cannot infer a safe default for — stub the PHPUnit
+        // `createStub` equivalent (false) explicitly.
+        $mockUser->allows('offsetExists')->returns(false);
 
-        $mockRoom = $this->createStub(EntityInterface::class);
-        $mockRoom->method('get')
-            ->willReturnMap([
-                ['id', 456],
-                ['user_id', 1],
-            ]);
+        $mockRoom = Double::for(EntityInterface::class);
+        $mockRoom->allows('get')->with('id')->returns(456);
+        $mockRoom->allows('get')->with('user_id')->returns(1);
 
         $broadcaster = $this->createPusherBroadcasterWithMock(
             $config,
@@ -635,14 +693,13 @@ class PusherBroadcasterTest extends TestCase
             $pusher,
         );
 
-        $broadcaster->expects($this->exactly(2))
-            ->method('retrieveUserFromCakeRequest')
-            ->willReturn($mockUser);
+        $broadcaster->expects('retrieveUserFromCakeRequest')
+            ->times(2)
+            ->returns($mockUser);
 
-        $broadcaster->expects($this->once())
-            ->method('resolveEntityFromKey')
+        $broadcaster->expects('resolveEntityFromKey')
             ->with('room', '456')
-            ->willReturn($mockRoom);
+            ->returns($mockRoom);
 
         $broadcaster->registerChannel('presence-rooms.{room}', TestPresenceChannel::class);
 
@@ -676,7 +733,7 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherStub();
-        $mockUser = $this->createStub(EntityInterface::class);
+        $mockUser = Double::for(EntityInterface::class);
 
         $broadcaster = $this->createPusherBroadcasterWithMock(
             $config,
@@ -684,9 +741,9 @@ class PusherBroadcasterTest extends TestCase
             $pusher,
         );
 
-        $broadcaster->expects($this->atLeastOnce())
-            ->method('retrieveUserFromCakeRequest')
-            ->willReturn($mockUser);
+        $broadcaster->expects('retrieveUserFromCakeRequest')
+            ->times(minimum: 1)
+            ->returns($mockUser);
 
         $broadcaster->registerChannel('invalid.{id}', InvalidChannel::class);
 
@@ -716,7 +773,7 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherStub();
-        $mockUser = $this->createStub(EntityInterface::class);
+        $mockUser = Double::for(EntityInterface::class);
 
         $broadcaster = $this->createPusherBroadcasterWithMock(
             $config,
@@ -724,9 +781,9 @@ class PusherBroadcasterTest extends TestCase
             $pusher,
         );
 
-        $broadcaster->expects($this->atLeastOnce())
-            ->method('retrieveUserFromCakeRequest')
-            ->willReturn($mockUser);
+        $broadcaster->expects('retrieveUserFromCakeRequest')
+            ->times(minimum: 1)
+            ->returns($mockUser);
 
         $broadcaster->registerChannel('nonexistent.{id}', 'NonExistentChannel');
 
@@ -756,11 +813,8 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherStub();
-        $mockUser = $this->createStub(EntityInterface::class);
-        $mockUser->method('get')
-            ->willReturnMap([
-                ['id', 1],
-            ]);
+        $mockUser = Double::for(EntityInterface::class);
+        $mockUser->allows('get')->with('id')->returns(1);
 
         $broadcaster = $this->createPusherBroadcasterWithMock(
             $config,
@@ -768,13 +822,11 @@ class PusherBroadcasterTest extends TestCase
             $pusher,
         );
 
-        $broadcaster->expects($this->once())
-            ->method('retrieveUserFromCakeRequest')
-            ->willReturn($mockUser);
+        $broadcaster->expects('retrieveUserFromCakeRequest')
+            ->returns($mockUser);
 
-        $broadcaster->expects($this->once())
-            ->method('getTableLocator')
-            ->willReturn($this->getTableLocator());
+        $broadcaster->expects('getTableLocator')
+            ->returns($this->getTableLocator());
 
         $broadcaster->registerChannel('private-orders.{order}', UnauthorizedChannel::class);
 
@@ -805,11 +857,8 @@ class PusherBroadcasterTest extends TestCase
 
         $pusher = $this->createPusherStub();
 
-        $mockUser = $this->createStub(EntityInterface::class);
-        $mockUser->method('get')
-            ->willReturnMap([
-                ['id', 1],
-            ]);
+        $mockUser = Double::for(EntityInterface::class);
+        $mockUser->allows('get')->with('id')->returns(1);
 
         $broadcaster = $this->createPusherBroadcasterWithMock(
             $config,
@@ -817,13 +866,11 @@ class PusherBroadcasterTest extends TestCase
             $pusher,
         );
 
-        $broadcaster->expects($this->once())
-            ->method('retrieveUserFromCakeRequest')
-            ->willReturn($mockUser);
+        $broadcaster->expects('retrieveUserFromCakeRequest')
+            ->returns($mockUser);
 
-        $broadcaster->expects($this->once())
-            ->method('getTableLocator')
-            ->willReturn($this->getTableLocator());
+        $broadcaster->expects('getTableLocator')
+            ->returns($this->getTableLocator());
 
         $broadcaster->registerChannel('orders.{order}', TestOrderChannel::class);
 
@@ -851,10 +898,9 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
+        $pusher->expects('authorizeChannel')
             ->with('private-test', '123.456')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
         $this->assertFalse($broadcaster->allowsJsonp());
@@ -888,9 +934,8 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+        $pusher->expects('authorizeChannel')
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
         $this->assertFalse($broadcaster->allowsJsonp());
@@ -923,10 +968,9 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
+        $pusher->expects('authorizeChannel')
             ->with('private-test', '123.456')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
         $this->assertTrue($broadcaster->allowsJsonp());
@@ -963,9 +1007,8 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+        $pusher->expects('authorizeChannel')
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -996,9 +1039,8 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+        $pusher->expects('authorizeChannel')
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
 
@@ -1030,10 +1072,9 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizeChannel')
+        $pusher->expects('authorizeChannel')
             ->with('private-test', '123.456')
-            ->willReturn('{"auth":"test-key:test-signature"}');
+            ->returns('{"auth":"test-key:test-signature"}');
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
         $broadcaster->registerChannel('private-test', fn($user): true => true);
@@ -1068,23 +1109,23 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('authorizePresenceChannel')
-            ->with('presence-test', '123.456', '1', $this->anything())
-            ->willReturn('{"auth":"test-key:presence-signature","channel_data":"{}"}');
+        $pusher->expects('authorizePresenceChannel')
+            ->with('presence-test', '123.456', '1', Argument::any())
+            ->returns('{"auth":"test-key:presence-signature","channel_data":"{}"}');
 
-        $mockEntity = $this->createStub(EntityInterface::class);
-        $mockEntity->method('get')
-            ->willReturnMap([
-                ['id', 1],
-                ['full_name', 'Test User'],
-                ['username', 'testuser'],
-            ]);
+        $mockEntity = Double::for(EntityInterface::class);
+        $mockEntity->allows('get')->with('id')->returns(1);
+        $mockEntity->allows('get')->with('full_name')->returns('Test User');
+        $mockEntity->allows('get')->with('username')->returns('testuser');
+        // ArrayAccess::offsetExists() carries only a tentative bool return,
+        // which Double cannot infer a safe default for — stub the PHPUnit
+        // `createStub` equivalent (false) explicitly.
+        $mockEntity->allows('offsetExists')->returns(false);
 
         $broadcaster = $this->createPusherBroadcasterWithMock($config, ['resolveUserFromRequest'], $pusher);
-        $broadcaster->expects($this->atLeastOnce())
-            ->method('resolveUserFromRequest')
-            ->willReturn($mockEntity);
+        $broadcaster->expects('resolveUserFromRequest')
+            ->times(minimum: 1)
+            ->returns($mockEntity);
 
         $request = new ServerRequest();
         $request = $request
@@ -1124,11 +1165,10 @@ class PusherBroadcasterTest extends TestCase
         }
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->exactly(3))
-            ->method('triggerBatch')
-            ->willReturn((object)['status' => 200]);
-        $pusher->expects($this->never())
-            ->method('trigger');
+        $pusher->expects('triggerBatch')
+            ->times(3)
+            ->returns((object)['status' => 200]);
+        $pusher->expects('trigger')->never();
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
         $broadcaster->bulkBroadcast($broadcasts, 10);
@@ -1160,9 +1200,9 @@ class PusherBroadcasterTest extends TestCase
         }
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->exactly(3))
-            ->method('triggerBatch')
-            ->willReturn((object)['status' => 200]);
+        $pusher->expects('triggerBatch')
+            ->times(3)
+            ->returns((object)['status' => 200]);
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
         $broadcaster->bulkBroadcast($broadcasts, 10);
@@ -1182,14 +1222,13 @@ class PusherBroadcasterTest extends TestCase
         ];
 
         $pusher = $this->createPusherMock();
-        $pusher->expects($this->once())
-            ->method('triggerBatch')
-            ->with($this->callback(fn(array $batch): bool => count($batch) === 1
+        $pusher->expects('triggerBatch')
+            ->with(Argument::satisfies(fn($batch): bool => is_array($batch) && count($batch) === 1
                 && $batch[0]['channel'] === 'user.1'
                 && $batch[0]['name'] === 'Notify'
                 && $batch[0]['data'] === ['ok' => true]
                 && ($batch[0]['socket_id'] ?? null) === '123.456'))
-            ->willReturn((object)['status' => 200]);
+            ->returns((object)['status' => 200]);
 
         $broadcaster = $this->createPusherBroadcasterWithStub($config, $pusher);
         $broadcaster->bulkBroadcast([

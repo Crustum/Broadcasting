@@ -85,6 +85,23 @@ class TestQueueAdapter implements QueueAdapterInterface
     }
 
     /**
+     * Check whether pushing the given unique job would be skipped as a duplicate.
+     *
+     * @param string $jobClass Job class name
+     * @param array<string, mixed> $data Job data
+     * @param array<string, mixed> $options Job options
+     * @return bool True when an identical unique job is already captured
+     */
+    public function isDuplicate(string $jobClass, array $data = [], array $options = []): bool
+    {
+        if (empty($jobClass::$shouldBeUnique)) {
+            return false;
+        }
+
+        return isset(static::$uniqueJobIds[$this->getUniqueId($jobClass, 'execute', $data)]);
+    }
+
+    /**
      * Replace the queue adapter with test adapter
      *
      * @return void

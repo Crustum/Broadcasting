@@ -10,6 +10,8 @@ use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\MercureBroadcaster;
 use Crustum\Broadcasting\Exception\BroadcastingException;
 use Crustum\Broadcasting\Exception\InvalidChannelException;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Jose\Component\Encryption\JWEBuilder;
 use ReflectionClass;
 use RuntimeException;
@@ -26,18 +28,20 @@ use Symfony\Component\Mercure\Update;
  */
 class MercureBroadcasterTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * @var list<\Symfony\Component\Mercure\Update>
      */
     protected array $published = [];
 
     /**
-     * @var \Symfony\Component\Mercure\HubInterface&\PHPUnit\Framework\MockObject\Stub
+     * @var \Symfony\Component\Mercure\HubInterface
      */
     protected mixed $hub;
 
     /**
-     * @var \Symfony\Component\Mercure\Jwt\TokenFactoryInterface&\PHPUnit\Framework\MockObject\Stub
+     * @var \Symfony\Component\Mercure\Jwt\TokenFactoryInterface
      */
     protected mixed $tokenFactory;
 
@@ -55,8 +59,8 @@ class MercureBroadcasterTest extends TestCase
 
         $this->published = [];
         $this->tokenRequests = [];
-        $this->tokenFactory = $this->createStub(TokenFactoryInterface::class);
-        $this->tokenFactory->method('create')->willReturnCallback(function (...$args): string {
+        $this->tokenFactory = Double::for(TokenFactoryInterface::class);
+        $this->tokenFactory->allows('create')->resolves(function (...$args): string {
             $this->tokenRequests[] = [
                 'grants' => $args[0] ?? [],
                 'claims' => $args[1] ?? [],
@@ -65,11 +69,13 @@ class MercureBroadcasterTest extends TestCase
             return 'test-jwt';
         });
 
-        $this->hub = $this->createStub(HubInterface::class);
-        $this->hub->method('getFactory')->willReturn($this->tokenFactory);
-        $this->hub->method('getPublicUrl')->willReturn('https://hub.test/.well-known/mercure');
-        $this->hub->method('getCookieName')->willReturn('mercureAuthorization');
-        $this->hub->method('publish')->willReturnCallback(function (Update $update): string {
+        $this->hub = Double::for(HubInterface::class);
+        $this->hub->allows('getFactory')->returns($this->tokenFactory);
+        $this->hub->allows('getPublicUrl')->returns('https://hub.test/.well-known/mercure');
+        $this->hub->allows('getCookieName')->returns('mercureAuthorization');
+        $this->hub->allows('publish')->resolves(function (mixed ...$args): string {
+            $update = $args[0] ?? null;
+            assert($update instanceof Update);
             $this->published[] = $update;
 
             return 'urn:uuid:test';
@@ -81,8 +87,8 @@ class MercureBroadcasterTest extends TestCase
      */
     protected function tearDown(): void
     {
-        $this->hub = $this->createStub(HubInterface::class);
-        $this->tokenFactory = $this->createStub(TokenFactoryInterface::class);
+        $this->hub = Double::for(HubInterface::class);
+        $this->tokenFactory = Double::for(TokenFactoryInterface::class);
         $this->published = [];
         $this->tokenRequests = [];
 
@@ -530,9 +536,9 @@ class MercureBroadcasterTest extends TestCase
      */
     public function testBroadcastWrapsHubExceptions(): void
     {
-        $this->hub = $this->createStub(HubInterface::class);
-        $this->hub->method('getFactory')->willReturn($this->tokenFactory);
-        $this->hub->method('publish')->willThrowException(new RuntimeException('hub down'));
+        $this->hub = Double::for(HubInterface::class);
+        $this->hub->allows('getFactory')->returns($this->tokenFactory);
+        $this->hub->allows('publish')->throws(new RuntimeException('hub down'));
 
         $broadcaster = $this->broadcaster();
 

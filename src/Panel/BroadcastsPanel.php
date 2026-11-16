@@ -164,6 +164,44 @@ class BroadcastsPanel implements EventListenerInterface
     }
 
     /**
+     * Builds broadcast rows for the DebugBar waterfall.
+     *
+     * Duck-typed timeline source: the toolbar picks it up with no core
+     * changes. One row per broadcast group at send start, spanning the
+     * measured duration.
+     *
+     * @param array<string, mixed> $data Broadcasts panel data.
+     * @param float $requestStart Request start as microtime(true).
+     * @return list<array{at: float, duration_ms: float, type: string, label: string, panel: string, source: array{file: string, line: int}|null, ref: mixed}>
+     */
+    public function timelineEvents(array $data, float $requestStart): array
+    {
+        $events = [];
+        foreach (array_values((array)($data['groups'] ?? [])) as $group) {
+            $group = (array)$group;
+            $started = (float)($group['started'] ?? 0);
+            if ($started <= 0) {
+                continue;
+            }
+
+            $label = trim(($group['label'] ?? 'Broadcast') . ' (' . ($group['status_label'] ?? '') . ')');
+            $callsite = (array)($group['callsite'] ?? []);
+            $file = (string)($callsite['file'] ?? '');
+            $events[] = [
+                'at' => max(0.0, ($started - $requestStart) * 1000),
+                'duration_ms' => max(0.0, (float)($group['duration_ms'] ?? 0)),
+                'type' => 'broadcast',
+                'label' => mb_strimwidth($label, 0, 120, '…'),
+                'panel' => 'broadcasts',
+                'source' => $file !== '' ? ['file' => $file, 'line' => (int)($callsite['line'] ?? 0)] : null,
+                'ref' => $group['group_id'] ?? null,
+            ];
+        }
+
+        return $events;
+    }
+
+    /**
      * Subscribes the panel to broadcasting lifecycle events.
      *
      * @return array<string, mixed>
@@ -381,6 +419,7 @@ class BroadcastsPanel implements EventListenerInterface
             'correlation_id' => is_string($correlationId) ? $correlationId : null,
             'status' => $status,
             'status_label' => $statusLabel,
+            'started' => (float)($attempt['started'] ?? 0),
             'duration_ms' => $duration,
             'duration_label' => static::formatDuration($duration),
             'payload' => (array)($attempt['payload'] ?? []),

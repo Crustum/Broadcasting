@@ -23,6 +23,8 @@ use Crustum\Broadcasting\TestSuite\BroadcastingTrait;
 use Crustum\Broadcasting\TestSuite\TestBroadcaster;
 use Crustum\Broadcasting\TestSuite\TestQueueAdapter;
 use Exception;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use LogicException;
 
 /**
@@ -33,6 +35,7 @@ use LogicException;
 class BroadcastingTest extends TestCase
 {
     use BroadcastingTrait;
+    use VerifiesDoubles;
 
     /**
      * Clear all Broadcasting configurations
@@ -122,7 +125,7 @@ class BroadcastingTest extends TestCase
      */
     public function testSetQueueAdapter(): void
     {
-        $adapter = $this->createStub(QueueAdapterInterface::class);
+        $adapter = Double::for(QueueAdapterInterface::class);
         Broadcasting::setQueueAdapter($adapter);
 
         $this->assertSame($adapter, Broadcasting::getQueueAdapter());
@@ -426,11 +429,11 @@ class BroadcastingTest extends TestCase
      */
     public function testEventWithBroadcastableInterface(): void
     {
-        $event = $this->createStub(BroadcastableInterface::class);
-        $event->method('broadcastChannel')->willReturn(new Channel('posts'));
-        $event->method('broadcastEvent')->willReturn('PostCreated');
-        $event->method('broadcastData')->willReturn(['id' => 1]);
-        $event->method('broadcastSocket')->willReturn(null);
+        $event = Double::for(BroadcastableInterface::class);
+        $event->allows('broadcastChannel')->returns(new Channel('posts'));
+        $event->allows('broadcastEvent')->returns('PostCreated');
+        $event->allows('broadcastData')->returns(['id' => 1]);
+        $event->allows('broadcastSocket')->returns(null);
 
         $pending = Broadcasting::event($event);
 

@@ -12,6 +12,9 @@ use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\BroadcastingPlugin;
 use Crustum\Broadcasting\TestSuite\TestBroadcaster;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
+use JMac\Testing\Matching\Argument;
 
 /**
  * BroadcastingPlugin Test
@@ -20,6 +23,9 @@ use Crustum\Broadcasting\TestSuite\TestBroadcaster;
  */
 class BroadcastingPluginTest extends TestCase
 {
+    use VerifiesDoubles;
+
+    /**
     /**
      * Clear all Broadcasting configurations
      *
@@ -78,7 +84,7 @@ class BroadcastingPluginTest extends TestCase
             ],
         ]);
 
-        $app = $this->createStub(PluginApplicationInterface::class);
+        $app = Double::for(PluginApplicationInterface::class);
         $plugin = new BroadcastingPlugin();
 
         $plugin->bootstrap($app);
@@ -100,7 +106,7 @@ class BroadcastingPluginTest extends TestCase
             ],
         ]);
 
-        $app = $this->createStub(PluginApplicationInterface::class);
+        $app = Double::for(PluginApplicationInterface::class);
         $plugin = new BroadcastingPlugin();
 
         $plugin->bootstrap($app);
@@ -125,7 +131,7 @@ class BroadcastingPluginTest extends TestCase
             'file' => 'test-broadcasting',
         ]);
 
-        $app = $this->createStub(PluginApplicationInterface::class);
+        $app = Double::for(PluginApplicationInterface::class);
         $plugin = new BroadcastingPlugin();
 
         $plugin->bootstrap($app);
@@ -149,7 +155,7 @@ class BroadcastingPluginTest extends TestCase
             'enabled' => true,
         ]);
 
-        $app = $this->createStub(PluginApplicationInterface::class);
+        $app = Double::for(PluginApplicationInterface::class);
         $plugin = new BroadcastingPlugin();
 
         $plugin->bootstrap($app);
@@ -173,7 +179,7 @@ class BroadcastingPluginTest extends TestCase
             'enabled' => false,
         ]);
 
-        $app = $this->createStub(PluginApplicationInterface::class);
+        $app = Double::for(PluginApplicationInterface::class);
         $plugin = new BroadcastingPlugin();
 
         $plugin->bootstrap($app);
@@ -188,13 +194,12 @@ class BroadcastingPluginTest extends TestCase
      */
     public function testRoutes(): void
     {
-        $routes = $this->createMock(RouteBuilder::class);
-        $routes->expects($this->once())
-            ->method('plugin')
+        $routes = Double::for(RouteBuilder::class);
+        $routes->expects('plugin')
             ->with(
-                $this->equalTo('Crustum/Broadcasting'),
-                $this->equalTo(['path' => '/broadcasting']),
-                $this->isInstanceOf('Closure'),
+                'Crustum/Broadcasting',
+                ['path' => '/broadcasting'],
+                Argument::type('Closure'),
             );
 
         $plugin = new BroadcastingPlugin();

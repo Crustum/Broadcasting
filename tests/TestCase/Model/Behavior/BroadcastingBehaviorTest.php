@@ -7,6 +7,8 @@ use Cake\Event\EventInterface;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcasting;
 use Crustum\Broadcasting\Model\Behavior\BroadcastingBehavior;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use ReflectionClass;
 use TestApp\Model\Entity\User;
 use TestApp\Model\Table\UsersTable;
@@ -18,6 +20,9 @@ use TestApp\Model\Table\UsersTable;
  */
 class BroadcastingBehaviorTest extends TestCase
 {
+    use VerifiesDoubles;
+
+    /**
     /**
      * Fixtures
      *
@@ -163,10 +168,10 @@ class BroadcastingBehaviorTest extends TestCase
             'password' => 'password123',
         ]);
 
-        /** @var \Cake\Event\EventInterface<\Cake\ORM\Table>&\PHPUnit\Framework\MockObject\MockObject $event */
-        $event = $this->createStub(EventInterface::class);
-        $event->method('getName')->willReturn('Model.afterSave');
-        $event->method('getSubject')->willReturn($this->table);
+        /** @var \Cake\Event\EventInterface<\Cake\ORM\Table>&\JMac\Testing\DoubleInterface $event */
+        $event = Double::for(EventInterface::class);
+        $event->allows('getName')->returns('Model.afterSave');
+        $event->allows('getSubject')->returns($this->table);
 
         $this->behavior->handleEvent($event, $user);
     }
@@ -187,10 +192,10 @@ class BroadcastingBehaviorTest extends TestCase
         ]);
         $user->setNew(true);
 
-        /** @var \Cake\Event\EventInterface<\Cake\ORM\Table>&\PHPUnit\Framework\MockObject\MockObject $event */
-        $event = $this->createStub(EventInterface::class);
-        $event->method('getName')->willReturn('Model.afterSave');
-        $event->method('getSubject')->willReturn($this->table);
+        /** @var \Cake\Event\EventInterface<\Cake\ORM\Table>&\JMac\Testing\DoubleInterface $event */
+        $event = Double::for(EventInterface::class);
+        $event->allows('getName')->returns('Model.afterSave');
+        $event->allows('getSubject')->returns($this->table);
 
         $this->behavior->handleEvent($event, $user);
     }
@@ -212,10 +217,10 @@ class BroadcastingBehaviorTest extends TestCase
         ]);
         $user->setNew(false);
 
-        /** @var \Cake\Event\EventInterface<\Cake\ORM\Table>&\PHPUnit\Framework\MockObject\MockObject $event */
-        $event = $this->createStub(EventInterface::class);
-        $event->method('getName')->willReturn('Model.afterSave');
-        $event->method('getSubject')->willReturn($this->table);
+        /** @var \Cake\Event\EventInterface<\Cake\ORM\Table>&\JMac\Testing\DoubleInterface $event */
+        $event = Double::for(EventInterface::class);
+        $event->allows('getName')->returns('Model.afterSave');
+        $event->allows('getSubject')->returns($this->table);
 
         $this->behavior->handleEvent($event, $user);
     }

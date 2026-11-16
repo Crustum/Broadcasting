@@ -508,10 +508,28 @@ abstract class BaseBroadcaster implements BroadcasterInterface
     /**
      * Get channel name from request.
      *
+     * Non-string `channel_name` values (for example arrays from crafted
+     * request bodies) resolve to null; callers that must reject them with a
+     * dedicated error (e.g. Pusher `auth()` with a 403) should inspect
+     * `getRawChannelNameFromRequest()` first.
+     *
      * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
      * @return string|null
      */
     protected function getChannelNameFromRequest(ServerRequestInterface $request): ?string
+    {
+        $value = $this->getRawChannelNameFromRequest($request);
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * Get the raw channel_name value from the request body without type coercion.
+     *
+     * @param \Psr\Http\Message\ServerRequestInterface $request HTTP request
+     * @return mixed Raw `channel_name` value or null when absent
+     */
+    protected function getRawChannelNameFromRequest(ServerRequestInterface $request): mixed
     {
         $body = $request->getParsedBody();
 

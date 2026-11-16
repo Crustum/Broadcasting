@@ -34,6 +34,17 @@ class BroadcastingPlugin extends BasePlugin
     public const EVENT_SENT = 'Broadcasting.sent';
 
     /**
+     * Dispatched when a unique broadcast is skipped as a duplicate.
+     *
+     * Fired by `Broadcasting::queueBroadcast()` when the queue backend already
+     * holds an identical unique job. The event data carries the skipped job
+     * details (`jobClass`, `eventName`, `channels`, `payload`, `connection`).
+     *
+     * @var string
+     */
+    public const EVENT_UNIQUE_SKIPPED = 'Broadcasting.uniqueSkipped';
+
+    /**
      * Reserved payload key for cross-process debug metadata.
      *
      * Drivers / WebSocket servers (for example BlazeCast) must strip this key

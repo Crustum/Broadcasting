@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0]
+
+### Added
+
+- `Broadcasting.uniqueSkipped` event dispatched when a unique broadcast is skipped as a duplicate (`BroadcastingPlugin::EVENT_UNIQUE_SKIPPED`, with job class, event name, channels, payload, and connection in the event data)
+- `QueueAdapterInterface::isDuplicate()` probe so queue backends can report a pending duplicate without enqueueing
+
+### Fixed
+
+- Pusher `broadcast()` triggers each `private-encrypted-` channel with its own `trigger()` call while plain channels keep the 100-channel batching
+- Pusher `auth()` rejects a non-string `channel_name` with a 403 (`InvalidChannelException::unauthorized`) instead of fataling
+
+### Changed
+
+- Test suite moved from PHPUnit mocks to `jasonmccreary/double` (`^1.1`)
+
 ## [1.4.2]
 
 ### Added

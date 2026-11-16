@@ -5,6 +5,8 @@ namespace Crustum\Broadcasting\Test\TestCase\Broadcaster;
 
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcaster\NullBroadcaster;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 
@@ -15,6 +17,8 @@ use Psr\Http\Message\UriInterface;
  */
 class NullBroadcasterTest extends TestCase
 {
+    use VerifiesDoubles;
+
     /**
      * Test constructor without config
      *
@@ -215,15 +219,15 @@ class NullBroadcasterTest extends TestCase
      */
     protected function createMockRequest(): ServerRequestInterface
     {
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn('/test');
-        $uri->method('getQuery')->willReturn('');
+        $uri = Double::for(UriInterface::class);
+        $uri->allows('getPath')->returns('/test');
+        $uri->allows('getQuery')->returns('');
 
-        $request = $this->createStub(ServerRequestInterface::class);
-        $request->method('getUri')->willReturn($uri);
-        $request->method('getMethod')->willReturn('POST');
-        $request->method('getParsedBody')->willReturn([]);
-        $request->method('getQueryParams')->willReturn([]);
+        $request = Double::for(ServerRequestInterface::class);
+        $request->allows('getUri')->returns($uri);
+        $request->allows('getMethod')->returns('POST');
+        $request->allows('getParsedBody')->returns([]);
+        $request->allows('getQueryParams')->returns([]);
 
         return $request;
     }

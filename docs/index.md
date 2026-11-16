@@ -732,14 +732,21 @@ To create a custom queue adapter, implement `QueueAdapterInterface`:
 ```php
 class CustomQueueAdapter implements QueueAdapterInterface
 {
-    public function push(string $jobClass, array $data = [], array $options = []): bool
+    public function push(string $jobClass, array $data = [], array $options = []): void
     {
-        return true;
+        // Enqueue $jobClass with $data ...
     }
 
     public function getUniqueId(string $eventName, string $type, array $data = []): string
     {
         return uniqid($eventName . '_' . $type);
+    }
+
+    public function isDuplicate(string $jobClass, array $data = [], array $options = []): bool
+    {
+        // Return true when an identical unique job is already queued,
+        // so Broadcasting can dispatch the `Broadcasting.uniqueSkipped` event.
+        return false;
     }
 }
 ```

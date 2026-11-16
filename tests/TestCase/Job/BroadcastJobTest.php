@@ -10,9 +10,13 @@ use Crustum\Broadcasting\Job\BroadcastJob;
 use Crustum\Broadcasting\Test\TestApp\Event\TestUniqueBroadcastableClass;
 use Interop\Queue\Message as QueueMessage;
 use Interop\Queue\Processor as InteropProcessor;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 
 class BroadcastJobTest extends TestCase
 {
+    use VerifiesDoubles;
+
     protected BroadcastJob $broadcastJob;
 
     protected function setUp(): void
@@ -172,12 +176,16 @@ class BroadcastJobTest extends TestCase
      */
     protected function createMessageMock(array $data): Message
     {
-        $originalMessage = $this->createStub(QueueMessage::class);
-        $originalMessage->method('getMessageId')->willReturn('test-message-id');
+        $originalMessage = Double::for(QueueMessage::class);
+        $originalMessage->allows('getMessageId')->returns('test-message-id');
 
-        $message = $this->createStub(Message::class);
-        $message->method('getArgument')->willReturnCallback(fn($key, $default = null) => $data[$key] ?? $default);
-        $message->method('getOriginalMessage')->willReturn($originalMessage);
+        $message = Double::for(Message::class);
+        $message->allows('getArgument')->resolves(function (mixed ...$args) use ($data): mixed {
+            $key = $args[0] ?? null;
+
+            return $data[$key] ?? $args[1] ?? null;
+        });
+        $message->allows('getOriginalMessage')->returns($originalMessage);
 
         return $message;
     }

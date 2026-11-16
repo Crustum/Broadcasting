@@ -10,6 +10,8 @@ use Cake\Core\Configure;
 use Cake\Routing\Router;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Command\ChannelCommand;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use ReflectionClass;
 use TestApp\Application;
 use TestApp\Model\Entity\User;
@@ -22,6 +24,7 @@ use TestApp\Model\Entity\User;
 class ChannelCommandTest extends TestCase
 {
     use ConsoleIntegrationTestTrait;
+    use VerifiesDoubles;
 
     /**
      * setUp method
@@ -199,8 +202,8 @@ class ChannelCommandTest extends TestCase
     public function testGetPath(): void
     {
         $command = new ChannelCommand();
-        $args = $this->createStub(Arguments::class);
-        $args->method('getOption')->willReturn(null);
+        $args = Double::for(Arguments::class);
+        $args->allows('getOption')->returns(null);
 
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('getPath');

@@ -3,8 +3,11 @@ declare(strict_types=1);
 
 namespace Crustum\Broadcasting\Test\TestCase\Job;
 
+use Cake\Event\EventInterface;
+use Cake\Event\EventManager;
 use Cake\TestSuite\TestCase;
 use Crustum\Broadcasting\Broadcasting;
+use Crustum\Broadcasting\BroadcastingPlugin;
 use Crustum\Broadcasting\Channel\Channel;
 use Crustum\Broadcasting\Event\UniqueFor;
 use Crustum\Broadcasting\Job\BroadcastJob;
@@ -165,6 +168,42 @@ class UniqueBroadcastJobTest extends TestCase
 
         $this->assertSame(2, TestQueueAdapter::getQueuedJobCount());
         $this->assertCount(2, TestQueueAdapter::getQueuedJobsByClass(BroadcastJob::class));
+    }
+
+    /**
+     * Test a skipped duplicate unique broadcast dispatches the unique-skipped event
+     *
+     * @return void
+     */
+    public function testDuplicateUniqueBroadcastDispatchesUniqueSkippedEvent(): void
+    {
+        $skipped = [];
+        $listener = function (EventInterface $event) use (&$skipped): void {
+            $skipped[] = $event->getData();
+        };
+        EventManager::instance()->on(BroadcastingPlugin::EVENT_UNIQUE_SKIPPED, $listener);
+
+        try {
+            Broadcasting::to('orders')
+                ->event('OrderCreated')
+                ->data(['id' => 1])
+                ->unique()
+                ->queue();
+
+            Broadcasting::to('orders')
+                ->event('OrderCreated')
+                ->data(['id' => 1])
+                ->unique()
+                ->queue();
+        } finally {
+            EventManager::instance()->off(BroadcastingPlugin::EVENT_UNIQUE_SKIPPED, $listener);
+        }
+
+        $this->assertSame(1, TestQueueAdapter::getQueuedJobCount());
+        $this->assertCount(1, $skipped);
+        $this->assertSame(UniqueBroadcastJob::class, $skipped[0]['jobClass']);
+        $this->assertSame('OrderCreated', $skipped[0]['eventName']);
+        $this->assertSame(['orders'], $skipped[0]['channels']);
     }
 
     /**
