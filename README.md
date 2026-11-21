@@ -1,6 +1,6 @@
 # CakePHP Broadcasting Plugin
 
-The **Broadcasting** plugin provides real-time event broadcasting for CakePHP applications using WebSocket connections compatible with the Pusher protocol.
+The **Broadcasting** plugin provides real-time event broadcasting for CakePHP applications with Pusher (WebSocket), Redis, and Mercure (SSE) drivers.
 
 Broadcasting enables real-time communication between your CakePHP application and connected clients through WebSocket channels. The plugin supports public channels for open communication, private channels for authenticated users, and presence channels for tracking active users in real-time.
 

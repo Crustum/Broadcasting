@@ -1,6 +1,6 @@
 {
     "name": "crustum/broadcasting",
-    "description": "Broadcasting plugin for CakePHP applications",
+    "description": "Real-time event broadcasting for CakePHP (Pusher, Redis, Mercure SSE drivers)",
     "type": "cakephp-plugin",
     "license": "MIT",
     "authors": [
