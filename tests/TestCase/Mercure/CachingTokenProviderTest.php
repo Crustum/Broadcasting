@@ -24,8 +24,11 @@ class CachingTokenProviderTest extends TestCase
 
         $first = $provider->getJwt();
 
-        $this->assertSame($first, $provider->getJwt());
-        $this->assertSame($first, $provider->getJwt());
+        $result1 = $provider->getJwt();
+        $this->assertSame($first, $result1);
+
+        $result2 = $provider->getJwt();
+        $this->assertSame($first, $result2);
     }
 
     /**
